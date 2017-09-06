@@ -4,7 +4,7 @@ from scipy import ndimage
 from .toolkit import vectools
 import matplotlib.pyplot as plt
 import math
-from skimage.filters import threshold_local
+# from skimage.filters import threshold_local
 
 
 class Image:
@@ -125,7 +125,8 @@ class Image:
             elapsed = time.time() - time0
             if int(elapsed) > 0 and elapsed > timecounter:
                 if timecounter % reportInterval == 0:
-                    print('Sweeped', i, '/', len(angles), '(', 100 * float(i) / float(len(angles)), '% ) angles in', timecounter, 'seconds')
+                    print('Sweeped', i, '/', len(angles), '(', 100 * float(i) /
+                          float(len(angles)), '% ) angles in', timecounter, 'seconds')
                 timecounter += 1
 
         # Pad lines with zeros on inside
