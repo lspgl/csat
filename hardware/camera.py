@@ -25,18 +25,22 @@ class Camera:
 
     def wipe(self):
         cmd = 'gphoto2 -D'
-        c = Popen(cmd, shell=True, stdout=PIPE).wait()
+        Popen(cmd, shell=True, stdout=PIPE).wait()
 
     def collectSingle(self, fn='single.jpg'):
+        self.wipe()
         cmd = 'gphoto2 --capture-image-and-download --force-overwrite --filename ' + fn
         c = Popen(cmd, shell=True, stdout=PIPE)
         c.wait()
+        self.wipe()
 
     def collectSeries(self, n=2):
+        self.wipe()
         cmd = ('gphoto2 --set-config burstnumber=' +
                str(n) + ' --force-overwrite --filename cpt%n.jpg --capture-image-and-download')
         c = Popen(cmd, shell=True, stdout=PIPE)
         c.wait()
+        self.wipe()
 
     def getBattery(self):
         cmd = ('gphoto2 --get-config batterylevel')
@@ -50,5 +54,5 @@ class Camera:
 if __name__ == '__main__':
     cam = Camera()
     cam.getBattery()
-    # cam.collectSingle()
-    # cam.collectSeries()
+    cam.collectSingle()
+    cam.collectSeries()
