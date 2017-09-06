@@ -2,3 +2,4 @@
 *.pkl
 *.psd
 *.npz
+.DS_Store
