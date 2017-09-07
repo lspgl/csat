@@ -22,9 +22,6 @@ class Image:
         # p0, p1 with a resolution defined by the distance between the points
         # to avoid unnecessary interpolation where no information exists
 
-        # Let's add a comment here
-        # and also one from Xeon
-
         if img is None:
             img = self.image
 
