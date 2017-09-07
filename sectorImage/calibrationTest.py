@@ -6,7 +6,7 @@ def main():
 
     t0 = time.time()
 
-    fns = ['img/src/cpt' + str(i) + '.jpg' for i in range(1, 17)]
+    fns = ['img/src/cpt' + str(i) + '.jpg' for i in range(1, 9)]
     #fns = ['img/src/cpt1.jpg']
     c = calibration.Calibrator(fns)
     # c.sweepFFT()

@@ -15,13 +15,13 @@ class Calibrator:
         self.fns = fns
         print('Reading images', fns)
         self.images = [ndimage.imread(fn, flatten=True) for fn in self.fns]
-        self.image = self.images[0]
 
-    def sweepFFT(self, image):
+    def sweepFFT(self, i, image):
         # Generate an interpolated profile of the image matrix between points
         # p0, p1 with a resolution defined by the distance between the points
         # to avoid unnecessary interpolation where no information exists
 
+        print('running image', i)
         height, width = image.shape
         xs = np.linspace(0, height, height)
         lp = [(x, 0) for x in xs]
@@ -30,7 +30,10 @@ class Calibrator:
 
         zs = [self.interpolate(image, *p) for p in pairs]
 
-        smoothing = 1e6
+        """
+        zs = ndimage.median_filter(zs, size=100)
+
+        smoothing = 1e8
         x = np.linspace(0, len(zs), len(zs))
         spline = scipy.interpolate.UnivariateSpline(x, zs, s=smoothing)
         zs_spline = spline(x)
@@ -45,16 +48,19 @@ class Calibrator:
         fig = plt.figure()
         ax1 = fig.add_subplot(211)
         ax2 = fig.add_subplot(212)
-        ax1.imshow(self.image)
+
+        ax1.imshow(image)
+        """
         ax1.plot([li[1], ri[1]], [li[0], ri[0]])
         ax2.axvline(x=max_point)
         ax2.plot(zs_spline)
         ax2.plot(zs)
-
-        # ax2.imshow(zs, aspect='auto')
-
-        fig.savefig('img/out/calibration.png', dpi=300)
         """
+        # print(zs)
+        ax2.imshow(zs, aspect='auto')
+
+        fig.savefig('img/out/calibration_' + str(i) + '.png', dpi=300)
+        theta = 0
         return theta
 
     def interpolate(self, img, p0, p1, interpolationOrder=1):
@@ -66,14 +72,16 @@ class Calibrator:
         x, y = np.linspace(x0, x1, res), np.linspace(y0, y1, res)
 
         zi = ndimage.map_coordinates(img, np.vstack((x, y)), order=interpolationOrder, mode='nearest')
-        zifft = fft.fftshift(fft.fft(np.abs(ndimage.gaussian_filter1d(ndimage.laplace(zi), sigma=10))))
+        zi_filter = np.abs(ndimage.laplace(ndimage.maximum_filter1d(zi, size=10)))
+        zifft = fft.fftshift(fft.fft(zi_filter))
         mz = np.max(np.abs(zifft[len(zifft) // 2 + 10:]))
-        return mz
+        # return zi_filter
+        # return mz
         return np.ones(len(zifft)) * mz
-        return np.abs(zifft[3000:3100])
+        return np.abs(zifft)
 
     def sweepAll(self):
-        thetas = [self.sweepFFT(im) for im in self.images]
+        thetas = [self.sweepFFT(i, im) for i, im in enumerate(self.images)]
 
         fig = plt.figure()
         ax = fig.add_subplot(111)

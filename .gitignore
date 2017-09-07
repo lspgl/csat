@@ -4,3 +4,4 @@
 *.npz
 *.bak
 .DS_Store
+sectorImage/img/out/*.png
