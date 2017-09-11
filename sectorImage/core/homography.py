@@ -3,6 +3,7 @@ import cv2
 import math
 import multiprocessing as mp
 import matplotlib.pyplot as plt
+import homography_gpu
 
 
 def getHomography(fnpair, scaling=0.25, plot=False):
@@ -42,7 +43,6 @@ def getHomography(fnpair, scaling=0.25, plot=False):
     if len(good) > MIN_MATCH_COUNT:
         src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
         dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
-
         M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
         print(M)
         matchesMask = mask.ravel().tolist()
@@ -76,7 +76,7 @@ def getHomography(fnpair, scaling=0.25, plot=False):
     return M
 
 
-def solveRotation(h, scaling=0.25):
+def solveRotation(h, scaling=1.0):
     costheta = np.mean([h.item(0, 0), h.item(1, 1)])
     sintheta = np.mean([h.item(1, 0), -h.item(0, 1)])
     tx = h.item(0, 2)
@@ -110,7 +110,7 @@ def getOscillation(directory, n=16):
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.scatter(ms)
+    ax.plot(*zip(*ms))
     fig.savefig('img/out/homography_oscillation.png', dpi=300)
 
     print(ms)
