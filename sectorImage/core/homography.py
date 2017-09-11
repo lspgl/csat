@@ -1,61 +1,124 @@
 import numpy as np
 import cv2
-from matplotlib import pyplot as plt
+import math
+import multiprocessing as mp
 
-MIN_MATCH_COUNT = 10
 
-img1 = cv2.imread('img/src/copper/cpt2.jpg', cv2.IMREAD_GRAYSCALE)          # queryImage
-img2 = cv2.imread('img/src/copper/cpt3.jpg', cv2.IMREAD_GRAYSCALE)  # trainImage
-img1 = cv2.resize(img1, (0, 0), fx=0.5, fy=0.5)
-img2 = cv2.resize(img2, (0, 0), fx=0.5, fy=0.5)
+def getHomography(fnpair, scaling=0.25, plot=False):
 
-# Initiate SIFT detector
-print('creating')
-sift = cv2.xfeatures2d.SIFT_create()
-print('TP0')
-# find the keypoints and descriptors with SIFT
-kp1, des1 = sift.detectAndCompute(img1, None)
-kp2, des2 = sift.detectAndCompute(img2, None)
+    fn1, fn2 = fnpair
+    MIN_MATCH_COUNT = 10
 
-FLANN_INDEX_KDTREE = 0
-index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=32)
-search_params = dict(checks=200)
-print('TP1')
-flann = cv2.FlannBasedMatcher(index_params, search_params)
-print('knnMatch')
-matches = flann.knnMatch(des1, des2, k=2)
+    print('Loading and resizing Images')
 
-# store all the good matches as per Lowe's ratio test.
-good = []
-for m, n in matches:
-    if m.distance < 0.7 * n.distance:
-        good.append(m)
+    img1 = cv2.imread(fn1, cv2.IMREAD_GRAYSCALE)
+    img2 = cv2.imread(fn2, cv2.IMREAD_GRAYSCALE)
+    img1 = cv2.resize(img1, (0, 0), fx=scaling, fy=scaling)
+    img2 = cv2.resize(img2, (0, 0), fx=scaling, fy=scaling)
 
-print('TP2')
-if len(good) > MIN_MATCH_COUNT:
-    src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
-    dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+    # Initiate SIFT detector
+    print('SIFT Features')
+    sift = cv2.xfeatures2d.SIFT_create()
 
-    M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-    print(M)
-    matchesMask = mask.ravel().tolist()
+    # find the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(img1, None)
+    kp2, des2 = sift.detectAndCompute(img2, None)
 
-    h, w = img1.shape
-    pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
-    dst = cv2.perspectiveTransform(pts, M)
+    FLANN_INDEX_KDTREE = 0
+    index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=8)
+    search_params = dict(checks=200)
+    print('Matching Features')
+    flann = cv2.FlannBasedMatcher(index_params, search_params)
+    matches = flann.knnMatch(des1, des2, k=2)
 
-    img2 = cv2.polylines(img2, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
+    # store all the good matches as per Lowe's ratio test.
+    good = []
+    for m, n in matches:
+        if m.distance < 0.7 * n.distance:
+            good.append(m)
 
-else:
-    print("Not enough matches are found - %d/%d" % (len(good), MIN_MATCH_COUNT))
-    matchesMask = None
+    print('Finding Homography')
+    if len(good) > MIN_MATCH_COUNT:
+        src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
+        dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
 
-print('TP3')
-draw_params = dict(matchColor=(0, 255, 0),  # draw matches in green color
-                   singlePointColor=None,
-                   matchesMask=matchesMask,  # draw only inliers
-                   flags=2)
+        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+        print(M)
+        matchesMask = mask.ravel().tolist()
 
-img3 = cv2.drawMatches(img1, kp1, img2, kp2, good, None, **draw_params)
+        h, w = img1.shape
+        pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
+        dst = cv2.perspectiveTransform(pts, M)
 
-plt.imshow(img3, 'gray'), plt.show()
+        img2 = cv2.polylines(img2, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
+
+    else:
+        print("Not enough matches are found - %d/%d" % (len(good), MIN_MATCH_COUNT))
+        matchesMask = None
+
+    print('Plotting')
+    if plot:
+        from matplotlib import pyplot as plt
+        fig = plt.figure(figsize=(10, 5))
+        ax = fig.add_subplot(111)
+
+        draw_params = dict(matchColor=(0, 255, 0),  # draw matches in green color
+                           singlePointColor=(0, 0, 128),
+                           matchesMask=matchesMask,  # draw only inliers
+                           flags=2)
+
+        img3 = cv2.drawMatches(img1, kp1, img2, kp2, good, None, **draw_params)
+
+        ax.imshow(img3)
+        fig.savefig('img/out/homography.png', dpi=300)
+
+    return M
+
+
+def solveRotation(h, scaling=0.25):
+    costheta = np.mean([h.item(0, 0), h.item(1, 1)])
+    sintheta = np.mean([h.item(1, 0), -h.item(0, 1)])
+    tx = h.item(0, 2)
+    ty = h.item(1, 2)
+    b = np.array([-tx, -ty])
+    a = np.array([[costheta - 1, -sintheta], [sintheta, costheta - 1]])
+
+    x = np.linalg.solve(a, b) / scaling
+    return x
+
+
+def calculateMidpoint(fnpair):
+    h = getHomography(fnpair)
+    mp = solveRotation(h)
+    return mp
+
+
+def getOscillation(directory, n=16):
+    fns = [directory + '/cpt' + str(i + 1) + '.jpg' for i in range(n)]
+    scaling = 0.25
+    fnpairs = []
+    for i, fn in enumerate(fns):
+        try:
+            fnpairs.append([fn, fns[i + 1]])
+        except IndexError:
+            fnpairs.append([fn, fns[0]])
+
+    ncpus = mp.cpu_count()
+    pool = mp.Pool(ncpus)
+    ms = pool.map(calculateMidpoint, fnpairs)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.scatter(ms)
+    fig.savefig('img/out/homography_oscillation.png', dpi=300)
+
+    print(ms)
+
+
+if __name__ == '__main__':
+    fn1 = 'img/src/copper/cpt3.jpg'
+    fn2 = 'img/src/copper/cpt4.jpg'
+    getOscillation('img/src/copper')
+    #scaling = 0.25
+    #h = getHomography(fn1, fn2, scaling=scaling, plot=False)
+    #solveRotation(h, scaling)
