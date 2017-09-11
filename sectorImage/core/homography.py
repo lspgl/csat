@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import math
 import multiprocessing as mp
+import matplotlib.pyplot as plt
 
 
 def getHomography(fnpair, scaling=0.25, plot=False):
@@ -58,7 +59,7 @@ def getHomography(fnpair, scaling=0.25, plot=False):
 
     print('Plotting')
     if plot:
-        from matplotlib import pyplot as plt
+
         fig = plt.figure(figsize=(10, 5))
         ax = fig.add_subplot(111)
 
