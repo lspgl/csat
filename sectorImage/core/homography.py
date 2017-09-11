@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import homography_gpu
 
 
-def getHomography(fnpair, scaling=0.25, plot=False):
+def getHomography(fnpair, scaling=0.5, plot=False):
 
     fn1, fn2 = fnpair
     MIN_MATCH_COUNT = 10
@@ -32,6 +32,7 @@ def getHomography(fnpair, scaling=0.25, plot=False):
     print('Matching Features')
     flann = cv2.FlannBasedMatcher(index_params, search_params)
     matches = flann.knnMatch(des1, des2, k=2)
+    print(matches)
 
     # store all the good matches as per Lowe's ratio test.
     good = []

@@ -10,8 +10,10 @@ import multiprocessing as mp
 
 def getHomography_GPU(fns, plot=False):
     path1, path2 = fns
-    image1 = np.asarray(Image.open(path1))
-    image2 = np.asarray(Image.open(path2))
+    pil1 = Image.open(path1)
+    pil2 = Image.open(path2)
+    image1 = np.asarray(pil1)
+    image2 = np.asarray(pil2)
     print('Running SIFT on GPU')
     sift_ocl = sift.SiftPlan(image1.shape, image1.dtype, devicetype='GPU')
     kp1 = sift_ocl(image1)
