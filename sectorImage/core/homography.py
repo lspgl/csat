@@ -4,8 +4,10 @@ from matplotlib import pyplot as plt
 
 MIN_MATCH_COUNT = 10
 
-img1 = cv2.imread('img/src/copper/cpt1.jpg', 0)          # queryImage
-img2 = cv2.imread('img/src/copper/cpt2.jpg', 0)  # trainImage
+img1 = cv2.imread('img/src/copper/cpt2.jpg', 0)          # queryImage
+img2 = cv2.imread('img/src/copper/cpt3.jpg', 0)  # trainImage
+img1 = cv2.resize(img1, (0, 0), fx=0.5, fy=0.5)
+img2 = cv2.resize(img2, (0, 0), fx=0.5, fy=0.5)
 
 # Initiate SIFT detector
 print('creating')
@@ -16,11 +18,12 @@ kp1, des1 = sift.detectAndCompute(img1, None)
 kp2, des2 = sift.detectAndCompute(img2, None)
 
 FLANN_INDEX_KDTREE = 0
-index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-search_params = dict(checks=100)
+index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=32)
+#index_params = dict(algorithm=FLANN_INDEX_LSH, table_number=6, key_size=12, multi_probe_level=1)
+search_params = dict(checks=200)
 print('TP1')
 flann = cv2.FlannBasedMatcher(index_params, search_params)
-
+print('knnMatch')
 matches = flann.knnMatch(des1, des2, k=2)
 
 # store all the good matches as per Lowe's ratio test.
