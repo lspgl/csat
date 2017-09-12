@@ -20,8 +20,8 @@ def getHomography_GPU(fns, plot=False):
     kp2 = sift_ocl(image2)
 
     print('Running Match on GPU')
-    mp = sift.MatchPlan(devicetype='GPU')
-    match = mp(kp1, kp2, raw_results=True)
+    matchplan = sift.MatchPlan(devicetype='GPU')
+    match = matchplan(kp1, kp2, raw_results=True)
 
     src_pts = np.empty((len(match), 2))
     dst_pts = np.empty((len(match), 2))
@@ -62,8 +62,8 @@ def solveRotation(h, scaling=1.0):
 
 def calculateMidpoint(fnpair):
     h = getHomography_GPU(fnpair)
-    mp = solveRotation(h)
-    return mp
+    midpoint = solveRotation(h)
+    return midpoint
 
 
 def getOscillation(directory, n=16):

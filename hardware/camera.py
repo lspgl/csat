@@ -35,6 +35,7 @@ class Camera:
         self.wipe()
 
     def collectSeries(self, n=2):
+
         self.wipe()
         cmd = ('gphoto2 --set-config burstnumber=' +
                str(n) + ' --force-overwrite --filename cpt%n.jpg --capture-image-and-download')
