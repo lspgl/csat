@@ -51,7 +51,7 @@ class Stepper:
 
         return
 
-    def tinkerdisco(self):
+    def disable(self):
         # Disable stepper and disconnect from tinkerforge brick
         self.stepper.disable()
         self.ipcon.disconnect()
@@ -68,7 +68,7 @@ class Stepper:
         time.sleep(0.45)
 
         # Calculate steps for n images
-        steps = self.mode * self.normTurn / float(n)
+        steps = int(self.mode * self.normTurn // float(n))
         for i in range(0, n):
             # Rotate section
             self.stepper.set_steps(steps)
@@ -78,5 +78,9 @@ class Stepper:
 
         return
 
+
 if __name__ == '__main__':
     stepper = Stepper()
+    stepper.enable()
+    stepper.tinkerstepper(8)
+    stepper.disable()
