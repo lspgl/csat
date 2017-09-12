@@ -9,7 +9,6 @@ import multiprocessing as mp
 
 
 def getHomography_GPU(fns, plot=False):
-    # Adding a remote Comment
     path1, path2 = fns
     pil1 = Image.open(path1)
     pil2 = Image.open(path2)
