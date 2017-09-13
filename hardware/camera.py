@@ -47,7 +47,6 @@ class Camera:
             if line != '':
                 ctr += 1
                 print('Captured image', ctr)
-                t0 = time.time()
             if ctr == n:
                 c.kill()
                 break
