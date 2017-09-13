@@ -17,7 +17,7 @@ import random
 
 class Stepper:
 
-    def __init__(self):
+    def __init__(self, autoEnable=False):
         self.HOST = "localhost"
         self.PORT = 4223
         self.STP = "6rHF7Q"
@@ -30,6 +30,10 @@ class Stepper:
         self.vmax = 10000  # Maximum velocity in steps/s
         self.ramping = 50000
         self.normTurn = 200  # Normalized steps per turn
+        if autoEnable:
+            self.enable()
+        else:
+            self.enabled = False
 
     def enable(self):
         # Former tinkerconn
@@ -49,18 +53,21 @@ class Stepper:
         self.stepper.set_steps(32)
         self.stepper.set_steps(-32)
 
+        self.enabled = True
+
         return
 
     def disable(self):
         # Disable stepper and disconnect from tinkerforge brick
         self.stepper.disable()
         self.ipcon.disconnect()
+        self.enabled = False
         return
 
     def cb_position_reached(self, position):
         print('Reached Target')
 
-    def tinkerstepper(self, n, synchfps=4):
+    def discreteRotation(self, n, synchfps=4):
         # Enable Laser only after a position is reached
         # Desynchronization can be easily seen if pictures have no laser line
         self.stepper.register_callback(self.stepper.CALLBACK_POSITION_REACHED, lambda x: self.cb_position_reached(x))
@@ -82,5 +89,5 @@ class Stepper:
 if __name__ == '__main__':
     stepper = Stepper()
     stepper.enable()
-    stepper.tinkerstepper(8)
+    stepper.discreteRotation(8)
     stepper.disable()

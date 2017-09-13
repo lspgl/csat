@@ -6,7 +6,7 @@ FNULL = open(os.devnull, 'w')
 
 class Camera:
 
-    def __init__(self, a=0,):
+    def __init__(self):
         self.checkConnection()
         if self.camera_available:
             self.wipe()
@@ -34,13 +34,14 @@ class Camera:
         c.wait()
         self.wipe()
 
-    def collectSeries(self, n=2):
+    def collectSeries(self, n=2, nowait=False):
 
         self.wipe()
         cmd = ('gphoto2 --set-config burstnumber=' +
                str(n) + ' --force-overwrite --filename cpt%n.jpg --capture-image-and-download')
         c = Popen(cmd, shell=True, stdout=PIPE)
-        c.wait()
+        if not nowait:
+            c.wait()
         self.wipe()
 
     def getBattery(self):

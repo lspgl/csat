@@ -15,7 +15,7 @@ def getHomography_GPU(fns, plot=False):
     image1 = np.asarray(pil1)
     image2 = np.asarray(pil2)
     print('Running SIFT on GPU')
-    sift_ocl = sift.SiftPlan(image1.shape, image1.dtype, devicetype='GPU')
+    sift_ocl = sift.SiftPlan(image1.shape, image1.dtype, template=image1, devicetype='GPU')
     kp1 = sift_ocl(image1)
     kp2 = sift_ocl(image2)
 
