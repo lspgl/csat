@@ -23,6 +23,9 @@ def getHomography_GPU(fns, plot=False):
     matchplan = sift.MatchPlan(devicetype='GPU')
     match = matchplan(kp1, kp2, raw_results=True)
 
+    if len(match) == 0:
+        return None
+
     src_pts = np.empty((len(match), 2))
     dst_pts = np.empty((len(match), 2))
     for i, m in enumerate(match):
@@ -62,8 +65,11 @@ def solveRotation(h, scaling=1.0):
 
 def calculateMidpoint(fnpair):
     h = getHomography_GPU(fnpair)
-    midpoint = solveRotation(h)
-    return midpoint
+    if h is not None:
+        midpoint = solveRotation(h)
+        return midpoint
+    else:
+        return None
 
 
 def getOscillation(directory, n=16):
@@ -81,12 +87,22 @@ def getOscillation(directory, n=16):
 
     ms = [calculateMidpoint(fnpair) for fnpair in fnpairs]
 
+    faulty = [i + 1 for i, m in enumerate(ms) if m is None]
+
+    ms_fixed = [m for m in ms if m is not None]
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.plot(*zip(*ms))
+    ax.plot(*zip(*ms_fixed))
     fig.savefig('img/out/homography_oscillation_GPU.png', dpi=300)
 
     print(ms)
+    print(faulty)
+    print(ms_fixed)
+
+
+def filterOutliers(pts):
+    pass
 
 
 if __name__ == '__main__':
@@ -94,4 +110,5 @@ if __name__ == '__main__':
     #h = getHomography_GPU(fns)
     # print(h)
     directory = 'img/src/copper'
-    getOscillation(directory)
+    directory = '../hardware'
+    getOscillation(directory, n=22)
