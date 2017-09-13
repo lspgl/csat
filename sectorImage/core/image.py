@@ -49,12 +49,15 @@ class Image:
         croppedImage = self.image[:, self.dimx - r:]
 
         # Shift to true center point
-        dr = 568
+        dr = 454
         rmax = r + dr
 
         # TODO: Test if this is the right way around
-        hplus = 5.0
-        hminus = 6.0
+        cy = 2014
+        hplus = cy
+        hminus = 4000 - cy
+        #hplus = 5.0
+        #hminus = 6.0
         htot = hplus + hminus
 
         lplus = hplus / htot * self.dimy

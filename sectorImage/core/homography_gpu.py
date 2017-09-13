@@ -101,18 +101,19 @@ def getOscillation(directory, n=16):
     print(av_midpoint)
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.scatter(*zip(*ms_fixed))
-    ax.plot(*zip(*midpoints))
-    ax.scatter(*zip(*av_midpoint))
+    ax.scatter(*zip(*ms_fixed), color='r')
+    ax.plot(*zip(*midpoints), lw=0.1, color='g')
+    ax.scatter(*av_midpoint, color='b')
     fig.savefig('img/out/homography_oscillation_GPU.png', dpi=300)
 
 
 def filterOutliers(pts):
     avg_raw = np.mean(pts, axis=0)
-    print(avg_raw)
-    std_raw = np.std(pts)
-    print(std_raw)
-    new_pts = [pt for pt in pts if np.linalg.norm(pt - avg_raw) < std_raw]
+    distances = [np.linalg.norm(pt - avg_raw) for pt in pts]
+    avg_dist = np.mean(distances)
+    std_dist = np.std(distances)
+    m = 1
+    new_pts = [pt for i, pt in enumerate(pts) if abs(distances[i] - avg_dist) < m * std_dist]
     return new_pts
 
 
