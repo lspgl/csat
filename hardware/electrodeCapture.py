@@ -1,14 +1,22 @@
 import stepper
 import camera
-import subprocess
+from multiprocessing import Process
+import time
 
 
 def captureTurn(n, stp, cam):
-    cam.collectSeries(n=n, nowait=True)
-    stp.discreteRotation(n=n)
+    kwargs = {'n': n}
+    #sp = Process(target=stp.discreteRotation, kwargs=kwargs)
+    cp = Process(target=cam.collectSeries, kwargs=kwargs)
+    # sp.start()
+    cp.start()
+    delay = 0.5
+    time.sleep(delay)
+    stp.discreteRotation(**kwargs)
+
 
 if __name__ == '__main__':
     cam = camera.Camera()
     stp = stepper.Stepper(autoEnable=True)
-    captureTurn(8, stp, cam)
+    captureTurn(22, stp, cam)
     stp.disable()

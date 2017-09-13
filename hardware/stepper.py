@@ -67,7 +67,7 @@ class Stepper:
     def cb_position_reached(self, position):
         print('Reached Target')
 
-    def discreteRotation(self, n, synchfps=4):
+    def discreteRotation(self, n, synchfps=5):
         # Enable Laser only after a position is reached
         # Desynchronization can be easily seen if pictures have no laser line
         self.stepper.register_callback(self.stepper.CALLBACK_POSITION_REACHED, lambda x: self.cb_position_reached(x))

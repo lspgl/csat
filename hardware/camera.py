@@ -1,5 +1,8 @@
 from subprocess import call, Popen, PIPE
 import os
+import readline
+import signal
+import time
 
 FNULL = open(os.devnull, 'w')
 
@@ -8,8 +11,6 @@ class Camera:
 
     def __init__(self):
         self.checkConnection()
-        if self.camera_available:
-            self.wipe()
 
     def checkConnection(self):
         cmd = 'gphoto2 --auto-detect | grep usb'
@@ -23,26 +24,33 @@ class Camera:
             print('Camera connected')
             self.camera_available = True
 
-    def wipe(self):
-        cmd = 'gphoto2 -D'
-        Popen(cmd, shell=True, stdout=PIPE).wait()
-
     def collectSingle(self, fn='single.jpg'):
-        self.wipe()
-        cmd = 'gphoto2 --capture-image-and-download --force-overwrite --filename ' + fn
+        cmd = 'gphoto2 --set-config burstnumber=1 --force-overwrite --filename ' + fn + ' --capture-image-and-download'
         c = Popen(cmd, shell=True, stdout=PIPE)
         c.wait()
-        self.wipe()
 
-    def collectSeries(self, n=2, nowait=False):
+    def collectSeries(self, n=8):
 
-        self.wipe()
-        cmd = ('gphoto2 --set-config burstnumber=' +
-               str(n) + ' --force-overwrite --filename cpt%n.jpg --capture-image-and-download')
-        c = Popen(cmd, shell=True, stdout=PIPE)
-        if not nowait:
-            c.wait()
-        self.wipe()
+        cmd = ['gphoto2',
+               '--set-config', 'burstnumber=' + str(n),
+               '--capture-image-and-download',
+               '--filename=cpt%n.jpg',
+               '--capture-tethered',
+               '--force-overwrite']
+        c = Popen(cmd, stdout=PIPE, stderr=PIPE)
+
+        ctr = 0
+        while True:
+            print('waiting for line...')
+            line = c.stderr.readline()
+            print('recieved line')
+            if line != '':
+                ctr += 1
+                print('Captured image', ctr)
+                t0 = time.time()
+            if ctr == n:
+                c.kill()
+                break
 
     def getBattery(self):
         cmd = ('gphoto2 --get-config batterylevel')
@@ -56,5 +64,5 @@ class Camera:
 if __name__ == '__main__':
     cam = Camera()
     cam.getBattery()
-    cam.collectSingle()
-    cam.collectSeries()
+    # cam.collectSingle()
+    cam.collectSeries(n=8)
