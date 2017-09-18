@@ -103,7 +103,7 @@ def getOscillation(directory, n=16):
     ax = fig.add_subplot(111)
     ax.scatter(*zip(*ms_fixed))
     ax.plot(*zip(*midpoints))
-    ax.scatter(*zip(*av_midpoint))
+    ax.scatter(*av_midpoint)
     fig.savefig('img/out/homography_oscillation_GPU.png', dpi=300)
 
 
