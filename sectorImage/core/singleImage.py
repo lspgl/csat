@@ -1,5 +1,6 @@
 from . import image
 from . import linewalker
+from . import lineParser as lp
 import numpy as np
 
 
@@ -13,8 +14,9 @@ class SingleImage:
         angularLines, self.angles = self.img.lineSweep(radius,
                                                        resolution=resolution,
                                                        interpolationOrder=interpolationOrder)
-        self.features, self.loss = self.img.detectFeatures(angularLines, plot=False)
-        self.angles = self.angles[int(self.loss / 2):int(-self.loss / 2)]
+        # self.features, self.loss = self.img.detectFeatures(angularLines, plot=True)
+        self.features = self.img.detectFeatures(angularLines, plot=False)
+        # self.angles = self.angles[int(self.loss / 2):int(-self.loss / 2)]
         if npz is not None:
             print('Storing Features in', npz)
             np.savez(npz, f=self.features, a=self.angles)
@@ -26,9 +28,12 @@ class SingleImage:
         self.angles = npzfile['a']
 
     def getLines(self):
+        """
         self.walker = linewalker.Walker()
         self.walker.scanMultiple(self.features)
-        self.rbands, self.phis = self.walker.fastFeatures(plot=False)
+        self.rbands, self.phis = self.walker.fastFeatures(plot=True)
+        """
+        self.rbands, self.phis = lp.LineParser(self.features)
 
     def __repr__(self):
         retstr = 'Image Processing Object for ' + str(self.fn)

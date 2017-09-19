@@ -3,6 +3,7 @@ import time
 from scipy import ndimage
 from .toolkit import vectools
 import matplotlib.pyplot as plt
+import matplotlib
 import math
 # from skimage.filters import threshold_local
 
@@ -168,47 +169,75 @@ class Image:
         # Distinguish band from background in binary matrix
         print('Convolving')
         kernel = [1, -2, 1]
-        laplacian = np.abs(ndimage.convolve1d(matrix, kernel, axis=1))
+        gaussian = ndimage.gaussian_filter1d(matrix, sigma=3, axis=1)
+        laplacian = np.abs(ndimage.convolve1d(gaussian, kernel, axis=1))
 
         # morph_lap = np.abs(ndimage.morphological_laplace(matrix, size=3))
         laplacian *= (1.0 / laplacian.max())
 
         # Threshold to cancel noise outside the band region
         print('Thresholding')
-        thresh = 0.08
+        thresh = 0.01
         binary = self.binaryThresholding(laplacian, thresh)
 
         print('Binary Closing')
         # Closing to obtain continuous edge
+        """
         structure = np.ones((11, 3))
-        mask = ndimage.morphology.binary_closing(binary, iterations=10, structure=structure)
+        mask = ndimage.morphology.binary_closing(binary, iterations=1, structure=structure)
         # Crop mask to significant boundary
         mask_cropped = mask[~np.all(mask == 0, axis=1)]
         # Number of lost angles
         loss = np.shape(matrix)[0] - np.shape(mask_cropped)[0]
-
+        """
+        loss = 0
+        mask_cropped = binary
         # binary_fill_holes closes all holes that are completely surrounded by True values
         # Since it does not close to the boundary of the image, artificial True paddings are
         # added. Upped and lower padding have to be added separately to avoid filling of the
         # Gap between bands.
 
-        # Add True boundary to bottom to close lower edge holes
+        # Add True boundary to bottom to close lower edgmaske holes
         print('Filling')
-        mask_low = np.vstack((mask_cropped, np.ones((1, np.shape(binary)[1]))))
-        mask_lowFill = ndimage.morphology.binary_fill_holes(mask_low)[:-1]
+        #mask_low = np.vstack((mask_cropped, np.ones((1, np.shape(binary)[1]))))
+        #mask_lowFill = ndimage.morphology.binary_fill_holes(mask_low)[:-1]
 
         # Repeat for top boundary
-        mask_high = np.vstack((np.ones((1, np.shape(binary)[1])), mask_lowFill))
-        mask_final = ndimage.morphology.binary_fill_holes(mask_high)[1:]
+        #mask_high = np.vstack((np.ones((1, np.shape(binary)[1])), mask_lowFill))
+        #mask_allFill = ndimage.morphology.binary_fill_holes(mask_high)[1:]
 
+        mask_allFill = ndimage.morphology.binary_fill_holes(mask_cropped)
+        mask_inv = 1 - mask_allFill
+        mask_final = 1 - ndimage.morphology.binary_fill_holes(mask_inv)
+
+        print('Logical rolling')
+        notLeft = np.roll(mask_final, 1, axis=0)
+        #notRight = 1 - np.roll(mask_final, -1, axis=0)
+        notTop = np.roll(mask_final, 1, axis=1)
+        #notBottom = 1 - np.roll(mask_final, -1, axis=1)
+        edges = (np.logical_xor(notLeft, mask_final) +
+                 np.logical_xor(notTop, mask_final)
+                 )
+        """
+        structure = np.ones((3, 3))
+        labeled_edges, num_features = ndimage.label(edges[1:-1], structure=structure)
+        print(num_features)
+        unique, counts = np.unique(labeled_edges, return_counts=True)
+        bands = []
+        for u, c in zip(unique, counts):
+            if c > 100 and u != 0:
+                band = np.argwhere(labeled_edges == u)
+                bands.append(band)
+
+        print(bands)
+        """
         if plot:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.imshow(mask_final, aspect='auto')
-            #ax.imshow(mask, aspect='auto')
+            ax.imshow(edges)
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')
-            fig.savefig('img/out/filter.png', dpi=600)
+            fig.savefig('img/out/filter.png', dpi=1200, interpolation='none')
 
-        return mask_final, loss
+        return edges  # , loss

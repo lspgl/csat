@@ -28,7 +28,7 @@ class Stepper:
         self.mode = 8  # Stepper mode, default is eights
         self.current = 1000  # in mA
         self.vmax = 10000  # Maximum velocity in steps/s
-        self.ramping = 50000
+        self.ramping = 30000
         self.normTurn = 200  # Normalized steps per turn
         if autoEnable:
             self.enable()
@@ -67,22 +67,23 @@ class Stepper:
     def cb_position_reached(self, position):
         print('Reached Target')
 
-    def discreteRotation(self, n, synchfps=1):
+    def discreteRotation(self, n):
         # Enable Laser only after a position is reached
         # Desynchronization can be easily seen if pictures have no laser line
         self.stepper.register_callback(self.stepper.CALLBACK_POSITION_REACHED, lambda x: self.cb_position_reached(x))
 
-        time.sleep(0.55)
+        # time.sleep(0.55)
+        time.sleep(0.18)
 
         # Calculate steps for n images
         steps = int(self.mode * self.normTurn // float(n))
+        print(steps)
         for i in range(0, n):
             # Rotate section
             self.stepper.set_steps(steps)
-
-            # Wait FPS Time of camera
-            time.sleep(1.0 / synchfps)
-
+            # Wait FPS Time of camera and release time (calibrated for shutter of 1/200)
+            deadtime = 1.0 / 5.88
+            time.sleep(deadtime)
         return
 
 

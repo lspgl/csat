@@ -18,5 +18,5 @@ def captureTurn(n, stp, cam):
 if __name__ == '__main__':
     cam = camera.Camera()
     stp = stepper.Stepper(autoEnable=True)
-    captureTurn(22, stp, cam)
+    captureTurn(16, stp, cam)
     stp.disable()

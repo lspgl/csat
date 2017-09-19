@@ -36,7 +36,7 @@ class Stitcher:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         for i, image in enumerate(self.images):
-            for rs, phis in zip(image.walker.rsplines, image.walker.phis):
+            for rs, phis in zip(image.rbands, image.phis):
                 phis = np.array(phis) + i * 1900
                 ax.plot(phis, rs, color='black', lw=0.5)
 
