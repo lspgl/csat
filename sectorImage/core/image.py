@@ -5,6 +5,7 @@ from .toolkit import vectools
 import matplotlib.pyplot as plt
 import matplotlib
 import math
+import cv2
 # from skimage.filters import threshold_local
 
 
@@ -57,15 +58,15 @@ class Image:
         cy = 2014
         hplus = cy
         hminus = 4000 - cy
-        #hplus = 5.0
-        #hminus = 6.0
+        # hplus = 5.0
+        # hminus = 6.0
         htot = hplus + hminus
 
         lplus = hplus / htot * self.dimy
         lminus = hminus / htot * self.dimy
 
         # Global center point for circular measurement
-        #c0 = (r, self.dimy / 2)
+        # c0 = (r, self.dimy / 2)
         c0 = (r, lplus)
         # Maximum sector angle which can be covered by a given radius
         # theta = math.asin(self.dimy / (2.0 * r))  # Radians
@@ -146,7 +147,7 @@ class Image:
         print('Sweep complete for', len(angles), 'angles in', round((time.time() - time0), 2), 's')
 
         # print lines
-        #plot = True
+        # plot = True
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -165,19 +166,30 @@ class Image:
         binary[binary > thresh] = True
         return binary
 
+    # ******************************************************************************************
+    # ******************************************************************************************
+
+    # ******************************************************************************************
+    # ******************************************************************************************
+
     def detectFeatures(self, matrix, plot=False):
         # Distinguish band from background in binary matrix
         print('Convolving')
         kernel = [1, -2, 1]
         gaussian = ndimage.gaussian_filter1d(matrix, sigma=3, axis=1)
-        laplacian = np.abs(ndimage.convolve1d(gaussian, kernel, axis=1))
+        # laplacian = np.abs(ndimage.convolve1d(gaussian, kernel, axis=1))
+        equ = cv2.equalizeHist(gaussian.astype('uint8'))
+        equ = equ.astype('float32')
+        lowpass = 0.
+        equ[equ < lowpass * np.max(equ)] = lowpass * np.max(equ)
+        laplacian = np.abs(ndimage.prewitt(equ.astype('float32'), axis=1))
 
         # morph_lap = np.abs(ndimage.morphological_laplace(matrix, size=3))
         laplacian *= (1.0 / laplacian.max())
 
         # Threshold to cancel noise outside the band region
         print('Thresholding')
-        thresh = 0.01
+        thresh = 0.02
         binary = self.binaryThresholding(laplacian, thresh)
 
         print('Binary Closing')
@@ -199,26 +211,26 @@ class Image:
 
         # Add True boundary to bottom to close lower edgmaske holes
         print('Filling')
-        #mask_low = np.vstack((mask_cropped, np.ones((1, np.shape(binary)[1]))))
-        #mask_lowFill = ndimage.morphology.binary_fill_holes(mask_low)[:-1]
+        # mask_low = np.vstack((mask_cropped, np.ones((1, np.shape(binary)[1]))))
+        # mask_lowFill = ndimage.morphology.binary_fill_holes(mask_low)[:-1]
 
         # Repeat for top boundary
-        #mask_high = np.vstack((np.ones((1, np.shape(binary)[1])), mask_lowFill))
-        #mask_allFill = ndimage.morphology.binary_fill_holes(mask_high)[1:]
+        # mask_high = np.vstack((np.ones((1, np.shape(binary)[1])), mask_lowFill))
+        # mask_allFill = ndimage.morphology.binary_fill_holes(mask_high)[1:]
 
         mask_allFill = ndimage.morphology.binary_fill_holes(mask_cropped)
         mask_inv = 1 - mask_allFill
         mask_final = 1 - ndimage.morphology.binary_fill_holes(mask_inv)
-
+        """
         print('Logical rolling')
         notLeft = np.roll(mask_final, 1, axis=0)
-        #notRight = 1 - np.roll(mask_final, -1, axis=0)
+        # notRight = 1 - np.roll(mask_final, -1, axis=0)
         notTop = np.roll(mask_final, 1, axis=1)
-        #notBottom = 1 - np.roll(mask_final, -1, axis=1)
+        # notBottom = 1 - np.roll(mask_final, -1, axis=1)
         edges = (np.logical_xor(notLeft, mask_final) +
                  np.logical_xor(notTop, mask_final)
                  )
-        """
+
         structure = np.ones((3, 3))
         labeled_edges, num_features = ndimage.label(edges[1:-1], structure=structure)
         print(num_features)
@@ -235,9 +247,9 @@ class Image:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.imshow(edges)
+            ax.imshow(equ)
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')
-            fig.savefig('img/out/filter.png', dpi=1200, interpolation='none')
+            fig.savefig('img/out/filter.png', dpi=600, interpolation='none')
 
-        return edges  # , loss
+        return mask_final  # , loss

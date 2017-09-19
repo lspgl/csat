@@ -15,10 +15,8 @@ def getHomography_GPU(fns, plot=False):
     image1 = np.asarray(pil1)
     image2 = np.asarray(pil2)
     print('Running SIFT on GPU')
-    sift_ocl = sift.SiftPlan(image1.shape, image1.dtype, devicetype='GPU')
-
+    sift_ocl = sift.SiftPlan(image1.shape, image1.dtype, template=image1, devicetype='GPU')
     kp1 = sift_ocl(image1)
-
     kp2 = sift_ocl(image2)
 
     print('Running Match on GPU')
@@ -104,7 +102,7 @@ def getOscillation(directory, n=16):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.scatter(*zip(*ms_fixed), color='r')
-    ax.plot(*zip(*midpoints), lw=0.5, color='g')
+    ax.plot(*zip(*midpoints), lw=0.1, color='g')
     ax.scatter(*av_midpoint, color='b')
     fig.savefig('img/out/homography_oscillation_GPU.png', dpi=300)
 
@@ -125,4 +123,4 @@ if __name__ == '__main__':
     # print(h)
     directory = 'img/src/copper'
     directory = '../hardware'
-    getOscillation(directory, n=16)
+    getOscillation(directory, n=22)

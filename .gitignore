@@ -6,3 +6,4 @@
 .DS_Store
 sectorImage/img/out/*.png
 hardware/*.jpg
+hardware/shielded

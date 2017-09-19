@@ -10,8 +10,8 @@ def main():
 
     #fns = ['img/src/cpt' + str(i) + '.jpg' for i in range(1, 23)]
     fns = ['../hardware/cpt' + str(i) + '.jpg' for i in range(1, 17)]
-    # fns = ['../hardware/cpt1.jpg']
-    s = stitcher.Stitcher(fns, mpflag=True)
+    fns = ['../hardware/cpt1.jpg']
+    s = stitcher.Stitcher(fns, mpflag=False)
     s.loadImages()
     # s.pickleSave()
 
