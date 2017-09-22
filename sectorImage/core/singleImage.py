@@ -28,12 +28,12 @@ class SingleImage:
         self.angles = npzfile['a']
 
     def getLines(self):
-        """
+
         self.walker = linewalker.Walker()
         self.walker.scanMultiple(self.features)
         self.rbands, self.phis = self.walker.fastFeatures(plot=True)
-        """
-        self.rbands, self.phis = lp.LineParser(self.features)
+
+        #self.rbands, self.phis = lp.LineParser(self.features)
 
     def __repr__(self):
         retstr = 'Image Processing Object for ' + str(self.fn)

@@ -1,11 +1,7 @@
 import numpy as np
-import scipy
 from scipy import ndimage
-import scipy.fftpack as fft
-from scipy.optimize import curve_fit
-
+import cv2
 import matplotlib.pyplot as plt
-from .toolkit import vectools
 import math
 
 
@@ -16,74 +12,56 @@ class Calibrator:
         print('Reading images', fns)
         self.images = [ndimage.imread(fn, flatten=True) for fn in self.fns]
 
-    def sweepFFT(self, i, image):
-        # Generate an interpolated profile of the image matrix between points
-        # p0, p1 with a resolution defined by the distance between the points
-        # to avoid unnecessary interpolation where no information exists
+    def houghTransform(self, im):
+        # gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+        gaussian = ndimage.gaussian_filter(im, sigma=5)
+        derivative = np.abs(ndimage.prewitt(gaussian, axis=0))
+        ret, thresh1 = cv2.threshold(derivative.astype('uint8'), 15, 10, cv2.THRESH_BINARY)
+        op = ndimage.morphology.binary_opening(thresh1, iterations=2)
+        op = op.astype('uint8')
+        draw = (im * 0.5).astype('uint8')
+        minLineLength = 1000
+        maxLineGap = 200
+        lines = cv2.HoughLinesP(op, 1, np.pi / 180, 1000, minLineLength, maxLineGap)
+        print(len(lines))
+        R_matrix = np.array([[0., 0.], [0., 0.]])
+        q_vector = np.array([[0.], [0.]])
+        for line in lines:
+            for x1, y1, x2, y2 in line:
+                cv2.line(draw, (x1, y1), (x2, y2), 500, 2)
+                r, q = self.p2vect(float(x1), float(y1), float(x2), float(y2))
+                R_matrix += r
+                q_vector += q
 
-        print('running image', i)
-        height, width = image.shape
-        xs = np.linspace(0, height, height)
-        lp = [(x, 0) for x in xs]
-        ep = [(x, width) for x in xs[::-1]]
-        pairs = [[l, e] for l, e in zip(lp, ep)]
+        print(R_matrix)
+        print(q_vector)
 
-        zs = [self.interpolate(image, *p) for p in pairs]
-
-        """
-        zs = ndimage.median_filter(zs, size=100)
-
-        smoothing = 1e8
-        x = np.linspace(0, len(zs), len(zs))
-        spline = scipy.interpolate.UnivariateSpline(x, zs, s=smoothing)
-        zs_spline = spline(x)
-        max_point = np.argmax(zs_spline)
-
-        ri = pairs[max_point][1]
-        li = pairs[max_point][0]
-
-        delta = ri[0] - li[0]
-        theta = math.atan2(delta, 6000)
-        """
-        fig = plt.figure()
-        ax1 = fig.add_subplot(211)
-        ax2 = fig.add_subplot(212)
-
-        ax1.imshow(image)
-        """
-        ax1.plot([li[1], ri[1]], [li[0], ri[0]])
-        ax2.axvline(x=max_point)
-        ax2.plot(zs_spline)
-        ax2.plot(zs)
-        """
-        # print(zs)
-        ax2.imshow(zs, aspect='auto')
-
-        fig.savefig('img/out/calibration_' + str(i) + '.png', dpi=300)
-        theta = 0
-        return theta
-
-    def interpolate(self, img, p0, p1, interpolationOrder=1):
-        x0, y0 = p0
-        x1, y1 = p1
-        res = vectools.pointdist(p0, p1)
-        res = int(res)
-        res = 6000
-        x, y = np.linspace(x0, x1, res), np.linspace(y0, y1, res)
-
-        zi = ndimage.map_coordinates(img, np.vstack((x, y)), order=interpolationOrder, mode='nearest')
-        zi_filter = np.abs(ndimage.laplace(ndimage.maximum_filter1d(zi, size=10)))
-        zifft = fft.fftshift(fft.fft(zi_filter))
-        mz = np.max(np.abs(zifft[len(zifft) // 2 + 10:]))
-        # return zi_filter
-        # return mz
-        return np.ones(len(zifft)) * mz
-        return np.abs(zifft)
-
-    def sweepAll(self):
-        thetas = [self.sweepFFT(i, im) for i, im in enumerate(self.images)]
+        lsq = np.linalg.lstsq(R_matrix, q_vector)[0]
+        print(lsq)
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.plot(thetas)
-        fig.savefig('img/out/thetas.png', dpi=300)
+        ax.imshow(draw)
+        ax.scatter(*lsq, s=5, marker='x', color='red', lw=0.5)
+        fig.savefig('img/out/houghTransform.jpg', dpi=600)
+
+    def p2vect(self, x1, y1, x2, y2):
+        # 2 points to m-q-line
+        nx_raw = x2 - x1
+        ny_raw = y2 - y1
+        length = math.sqrt(nx_raw**2 + ny_raw**2)
+        nx = nx_raw / length
+        ny = ny_raw / length
+
+        nx2 = nx**2
+        ny2 = ny**2
+        nxy = nx * ny
+        r = np.array([[1 - nx2, -nxy], [-nxy, 1 - ny2]])
+        q = np.array([[(1 - nx2) * x1 - nxy * y1], [-nxy * x1 + (1 - ny2) * y1]])
+        return(r, q)
+
+
+if __name__ == '__main__':
+    fns = ['img/src/calibration/cpt1.jpg']
+    c = Calibrator(fns)
+    c.houghTransform(c.images[0])

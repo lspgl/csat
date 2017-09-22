@@ -286,7 +286,7 @@ class Walker:
             ax.set_ylim([0, 5000])
             fig.savefig('img/out/walker.png', dpi=300)
 
-    def fastFeatures(self, smoothing=1e5, plot=False):
+    def fastFeatures(self, smoothing=1e4, plot=False):
         # Interpolate paths with an univariate spline with a smoothing term
         # to remove small features either generated through noise or
         # local features on the band

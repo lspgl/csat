@@ -176,21 +176,27 @@ class Image:
         # Distinguish band from background in binary matrix
         print('Convolving')
         kernel = [1, -2, 1]
-        gaussian = ndimage.gaussian_filter1d(matrix, sigma=3, axis=1)
+        #gaussian = ndimage.gaussian_filter1d(matrix, sigma=3, axis=1)
         # laplacian = np.abs(ndimage.convolve1d(gaussian, kernel, axis=1))
-        equ = cv2.equalizeHist(gaussian.astype('uint8'))
-        equ = equ.astype('float32')
-        lowpass = 0.
-        equ[equ < lowpass * np.max(equ)] = lowpass * np.max(equ)
-        laplacian = np.abs(ndimage.prewitt(equ.astype('float32'), axis=1))
+        equ0 = cv2.equalizeHist(matrix.astype('uint8'))
+        laplacian0 = np.abs(ndimage.prewitt(matrix, axis=1))
 
         # morph_lap = np.abs(ndimage.morphological_laplace(matrix, size=3))
-        laplacian *= (1.0 / laplacian.max())
+
+        equ = cv2.equalizeHist(laplacian0.astype('uint8'))
+        equ = equ.astype('float32')
+        lowpass = 0.5
+        equ[equ < lowpass * np.max(equ)] = 0
+
+        laplacian = laplacian0 * (1.0 / equ.max())
+        laplacian0 = ndimage.morphology.black_tophat(laplacian0, size=11)
 
         # Threshold to cancel noise outside the band region
         print('Thresholding')
-        thresh = 0.02
-        binary = self.binaryThresholding(laplacian, thresh)
+        thresh = 0.05
+        #binary = self.binaryThresholding(laplacian, thresh)
+        binary = ndimage.morphology.binary_opening(equ, iterations=2)
+        binary = ndimage.morphology.binary_closing(binary, iterations=2)
 
         print('Binary Closing')
         # Closing to obtain continuous edge
@@ -202,7 +208,6 @@ class Image:
         # Number of lost angles
         loss = np.shape(matrix)[0] - np.shape(mask_cropped)[0]
         """
-        loss = 0
         mask_cropped = binary
         # binary_fill_holes closes all holes that are completely surrounded by True values
         # Since it does not close to the boundary of the image, artificial True paddings are
@@ -211,12 +216,12 @@ class Image:
 
         # Add True boundary to bottom to close lower edgmaske holes
         print('Filling')
-        # mask_low = np.vstack((mask_cropped, np.ones((1, np.shape(binary)[1]))))
-        # mask_lowFill = ndimage.morphology.binary_fill_holes(mask_low)[:-1]
+        mask_low = np.vstack((binary, np.ones((1, np.shape(binary)[1]))))
+        mask_lowFill = ndimage.morphology.binary_fill_holes(mask_low)[:-1]
 
         # Repeat for top boundary
-        # mask_high = np.vstack((np.ones((1, np.shape(binary)[1])), mask_lowFill))
-        # mask_allFill = ndimage.morphology.binary_fill_holes(mask_high)[1:]
+        mask_high = np.vstack((np.ones((1, np.shape(binary)[1])), mask_lowFill))
+        mask_allFill = ndimage.morphology.binary_fill_holes(mask_high)[1:]
 
         mask_allFill = ndimage.morphology.binary_fill_holes(mask_cropped)
         mask_inv = 1 - mask_allFill
@@ -247,7 +252,7 @@ class Image:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.imshow(equ)
+            ax.imshow(laplacian)
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')
             fig.savefig('img/out/filter.png', dpi=600, interpolation='none')
