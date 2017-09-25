@@ -118,7 +118,9 @@ class Calibrator:
 if __name__ == '__main__':
     fns = ['img/src/calibration/cpt1.jpg']
     fns = ['img/src/calibration/cpt' + str(i) + '.jpg' for i in range(1, 17)]
+    fns = ['../hardware/cpt' + str(i) + '.jpg' for i in range(1, 17)]
+
     c = Calibrator(fns)
-    # c.getMidpoints()
-    mps = c.loadMidpoints()
+    mps = c.getMidpoints()
+    # mps = c.loadMidpoints()
     c.plotMidpoints(mps)
