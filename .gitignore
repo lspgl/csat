@@ -3,6 +3,7 @@
 *.psd
 *.npz
 *.bak
+*.npy
 .DS_Store
 sectorImage/img/out/*.png
 *cpt*.jpg
