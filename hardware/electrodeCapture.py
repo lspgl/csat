@@ -12,7 +12,11 @@ def captureTurn(n, stp, cam):
     cp.start()
     delay = 0.5
     time.sleep(delay)
-    stp.discreteRotation(**kwargs)
+    # stp.discreteRotation(**kwargs)
+    timeshift = -0.05
+    fps = 6
+    t = n*(1/fps) + timeshift
+    stp.continuousRotation(t=t)
 
 
 if __name__ == '__main__':

@@ -236,7 +236,7 @@ if __name__ == '__main__':
 
     fns = ['img/src/calibration/cpt' + str(i) + '.jpg' for i in range(1, 17)]
     #fns = ['img/src/calibration/cpt14.jpg']
-    # fns = ['../hardware/cpt' + str(i) + '.jpg' for i in range(1, 17)]
+    fns = ['../hardware/cpt' + str(i) + '.jpg' for i in range(1, 17)]
 
     c = Calibrator(fns)
     mps = c.getMidpoints(mp_FLAG=True)

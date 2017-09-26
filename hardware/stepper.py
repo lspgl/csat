@@ -51,6 +51,7 @@ class Stepper:
 
         # Establish proper coil alignment
         self.stepper.set_steps(32)
+        time.sleep(0.1)
         self.stepper.set_steps(-32)
 
         self.enabled = True
@@ -83,8 +84,19 @@ class Stepper:
             self.stepper.set_steps(steps)
             # Wait FPS Time of camera and release time (calibrated for shutter of 1/200)
             deadtime = 1.0 / 5.88
+            deadtime = 1.0/ 6.0
             time.sleep(deadtime)
         return
+
+    def continuousRotation(self, t):
+        totalSteps = self.normTurn * self.mode
+        speed = int(totalSteps/t)
+        self.stepper.set_max_velocity(speed)
+        self.stepper.set_steps(totalSteps)
+        time.sleep(t)
+        self.stepper.set_max_velocity(self.vmax)
+        return
+
 
 
 if __name__ == '__main__':
