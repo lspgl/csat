@@ -1,5 +1,7 @@
 import numpy as np
 from scipy import ndimage
+from scipy.interpolate import interp1d
+from scipy.stats import gaussian_kde
 import cv2
 import matplotlib.pyplot as plt
 import math
@@ -7,6 +9,9 @@ import multiprocessing as mp
 from operator import attrgetter
 
 from toolkit.line import Line
+from toolkit.intersection import Intersection
+
+import itertools
 
 
 class Calibrator:
@@ -51,7 +56,7 @@ class Calibrator:
         im = ndimage.imread(fn, flatten=True)
         # Blur out fast features
         print('Blurring')
-        gaussian = ndimage.gaussian_filter(im, sigma=5)
+        gaussian = ndimage.gaussian_filter(im, sigma=3)
         # Edge detection filter
         print('Prewitt Filtering')
         derivative = np.abs(ndimage.prewitt(gaussian, axis=0))
@@ -66,13 +71,14 @@ class Calibrator:
         # Convert to int
         op = op.astype('uint8')
         if plot:
-            draw = (op * 50).astype('uint8')
+            draw = (im / np.max(im) * 100).astype('uint8')
 
         # Get probabilistic Hough transformation
         print('Computing Hough transform')
-        minLineLength = 10
-        maxLineGap = 500
-        lines = cv2.HoughLinesP(op, 1, np.pi / 180, 100, minLineLength, maxLineGap)
+        minLineLength = 2000
+        maxLineGap = 25
+        lines = cv2.HoughLinesP(op, 1, np.pi / 180, 100, minLineLength=minLineLength, maxLineGap=maxLineGap)
+        print('Number of detected lines:', str(len(lines)))
         if plot:
             for line in lines:
                 for x1, y1, x2, y2 in line:
@@ -115,75 +121,124 @@ class Calibrator:
         return (lsq_tuple, i_pts, f_pts)
 
     def linePooling(self, lines_raw):
+        # Compound detected edges into a single line along a ridge
         lines = []
         ms = []
         qs = []
-        for line_raw in lines_raw:
-            line = Line(*line_raw[0])
+        # Convert lines to Line objects
+        for i, line_raw in enumerate(lines_raw):
+            line = Line(*line_raw[0], identifier=i)
             lines.append(line)
             ms.append(line.m)
             qs.append(line.q)
 
+        # Histogram along slope to distinguish ridges
         m_bin, m_edges = np.histogram(ms, bins='auto')
         avg_lines = []
         for i, b in enumerate(m_bin):
-            if b >= sorted(m_bin, reverse=True)[3] and b > 0:
+            # Take only the 4 largest ridges
+            if b >= sorted(m_bin, reverse=True)[2] and b > 0:
+                # Collect the lines in the histogram bins
                 ln_bin = []
                 e_low = m_edges[i]
                 e_high = m_edges[i + 1]
                 for ln in lines:
                     if ln.m >= e_low and ln.m <= e_high:
                         ln_bin.append(ln)
+                # Compute the true position of the ridge
+                # self.rejectLines(ln_bin)
                 avg_lines.append(self.averageLines(ln_bin))
 
         return avg_lines
 
-    def averageLines(self, line_bin):
-        x1 = line_bin[0].x1
-        x2 = line_bin[0].x2
+    def rejectLines(self, line_bin):
+        print('Rejecting minor lines')
+        pairs = itertools.combinations(line_bin, 2)
+        for ln1, ln2 in pairs:
+            intersect = Intersection(ln1, ln2)
 
-        avg_m = sum(line.m for line in line_bin) / float(len(line_bin))
-        correction_vect = [3000, avg_m * 3000]
+    def averageLines(self, line_bin):
+        # Take arbitrary start and end coordinates
+        x1_0 = 0
+        x2_0 = 7000
+
+        # Global average of the slope in a ridge
+        avg_correction_m = sum(line.m for line in line_bin) / float(len(line_bin))
+
+        # Vector along the global slope
+        correction_vect = [1, avg_correction_m]
         corrected_lines = []
-        for ln in line_bin:
+        for i, ln in enumerate(line_bin):
+            # Generate a list of edges, all pointing along the same slope
             dx, dy = correction_vect
             x1 = ln.x1
             y1 = ln.y1
             x2 = x1 + dx
             y2 = y1 + dy
-            ln_new = Line(x1, y1, x2, y2)
+            ln_new = Line(x1, y1, x2, y2, identifier=i)
             corrected_lines.append(ln_new)
+        # Sort the list along the intercept
         corrected_lines.sort(key=lambda x: x.q)
+        # Sort the original list with unmodified slope along the intercepts of the corrected slope
+        id_order = [ln.identifier for ln in corrected_lines]
+        line_bin_s = [line_bin[i] for i in id_order]
+
+        # Get the change in intercept between two q-adjacent lines
         delta_q = []
         for i, ln in enumerate(corrected_lines[:-1]):
             delta = corrected_lines[i + 1].q - ln.q
             delta_q.append(delta)
+        """
+        qs = [ln.q for ln in corrected_lines]
+        kernel = gaussian_kde(qs, bw_method=2e-1)
+        x = np.linspace(qs[0], qs[-1], num=100)
+        kde = kernel(x)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(x, kde)
+        ax.scatter(qs, np.zeros(len(qs)))
+        fig.savefig('img/out/intercepts_' + str(rand.randint(0, 4)) + '.png')
+        """
 
+        # The largest jump in q should differentiate the upper from the lower edge
         interface = delta_q.index(max(delta_q)) + 1
-        block_low = corrected_lines[:interface]
-        block_high = corrected_lines[interface:]
-        # avg_q = sum(line.q for line in line_bin) / float(len(line_bin))
-        # avg_q = (line_bin[0].q + line_bin[-1].q) / 2
-        # avg_q = (max(corrected_lines, key=attrgetter('q')).q + min(corrected_lines, key=attrgetter('q')).q) / 2
-        avg_q_low = sum(line.q for line in block_low) / float(len(block_low))
-        avg_q_high = sum(line.q for line in block_high) / float(len(block_high))
-        avg_q = (avg_q_low + avg_q_high) / 2
-        y1 = avg_m * x1 + avg_q
-        y2 = avg_m * x2 + avg_q
+        block_low = line_bin_s[:interface]
+        block_high = line_bin_s[interface:]
 
+        # Get the xy values of all detected edges along an edge
+        xs_low = [ln.x1 for ln in block_low] + [ln.x2 for ln in block_low]
+        ys_low = [ln.y1 for ln in block_low] + [ln.y2 for ln in block_low]
+
+        xs_high = [ln.x1 for ln in block_high] + [ln.x2 for ln in block_high]
+        ys_high = [ln.y1 for ln in block_high] + [ln.y2 for ln in block_high]
+
+        # Linearly interpolate along an edge
+        m_low, q_low = np.polyfit(xs_low, ys_low, 1)
+        m_high, q_high = np.polyfit(xs_high, ys_high, 1)
+
+        # Equally weigh upper and lower edges (even if they don't have an equal amount of Hough lines)
+        avg_m = (m_low + m_high) / 2
+        avg_q = (q_low + q_high) / 2
+
+        # Generate a line with along the ridge
+        y1_0 = avg_m * x1_0 + avg_q
+        y2_0 = avg_m * x2_0 + avg_q
+
+        # The confidence for the least square fitting is the number of detected Hough lines
         c = len(line_bin)
         print(c)
+        c = 1
 
-        return (Line(x1, y1, x2, y2), c)
+        return (Line(x1_0, y1_0, x2_0, y2_0), c)
 
 
 if __name__ == '__main__':
 
     fns = ['img/src/calibration/cpt' + str(i) + '.jpg' for i in range(1, 17)]
-    fns = ['img/src/calibration/cpt3.jpg']
+    #fns = ['img/src/calibration/cpt14.jpg']
     # fns = ['../hardware/cpt' + str(i) + '.jpg' for i in range(1, 17)]
 
     c = Calibrator(fns)
-    mps = c.getMidpoints(mp_FLAG=False)
+    mps = c.getMidpoints(mp_FLAG=True)
     # mps = c.loadMidpoints()
     c.plotMidpoints(mps)
