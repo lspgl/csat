@@ -75,8 +75,8 @@ class Calibrator:
 
         # Get probabilistic Hough transformation
         print('Computing Hough transform')
-        minLineLength = 2000
-        maxLineGap = 25
+        minLineLength = 1500
+        maxLineGap = 10
         lines = cv2.HoughLinesP(op, 1, np.pi / 180, 100, minLineLength=minLineLength, maxLineGap=maxLineGap)
         print('Number of detected lines:', str(len(lines)))
         if plot:
@@ -235,10 +235,10 @@ class Calibrator:
 if __name__ == '__main__':
 
     fns = ['img/src/calibration/cpt' + str(i) + '.jpg' for i in range(1, 17)]
-    #fns = ['img/src/calibration/cpt14.jpg']
+    fns = ['img/src/calibration/cpt1.jpg']
     # fns = ['../hardware/cpt' + str(i) + '.jpg' for i in range(1, 17)]
 
     c = Calibrator(fns)
-    mps = c.getMidpoints(mp_FLAG=True)
+    mps = c.getMidpoints(mp_FLAG=False)
     # mps = c.loadMidpoints()
     c.plotMidpoints(mps)
