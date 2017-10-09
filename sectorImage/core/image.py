@@ -191,59 +191,42 @@ class Image:
         np.abs(proc, out=proc)
 
         print('Thresholding')
+        # Threshold to 30% for noise reduction
         proc *= proc * (1.0 / proc.max())
         thresh = 0.3
         cv2.threshold(src=proc, dst=proc, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
 
         print('Morphology')
+        # Increase Noise reduction through binary morphology
         morph_kernel = np.ones((5, 5), np.uint8)
         cv2.morphologyEx(src=proc, dst=proc, op=cv2.MORPH_OPEN, iterations=1, kernel=morph_kernel)
         cv2.morphologyEx(src=proc, dst=proc, op=cv2.MORPH_CLOSE, iterations=1, kernel=morph_kernel)
 
         proc = proc.astype(np.uint8, copy=False)
-        # binary_fill_holes closes all holes that are completely surrounded by True values
-        # Since it does not close to the boundary of the image, artificial True paddings are
-        # added. Upped and lower padding have to be added separately to avoid filling of the
-        # Gap between bands.
 
-        # Add True boundary to bottom to close lower edgmaske holes
         print('Connecting')
+        # Label the complement regions of the binary image
         proc_inv = 1 - proc
         n_labels, labels, l_stats, l_centroids = cv2.connectedComponentsWithStats(image=proc_inv, connectivity=4)
+        # The maximum number of pixels in a noise field
+        # Everything larger is considered to be background
         fieldsize = 1e5
+        # Label background fields
         gaps = []
         for i, oc in enumerate(l_stats):
             if oc[-1] > fieldsize:
                 gaps.append(i)
 
+        # Set background fields to zero
         for gap in gaps:
             labels[labels == gap] = 0
+        # Set all forground fields to one
         labels[labels != 0] = 1
         labels = labels.astype(np.uint8, copy=False)
+
+        # Combine foreground noise with with thresholded image
         cv2.bitwise_or(src1=proc, src2=labels, dst=proc)
 
-        """
-        print('Logical rolling')
-        notLeft = np.roll(proc, 1, axis=0)
-        # notRight = 1 - np.roll(mask_final, -1, axis=0)
-        notTop = np.roll(proc, 1, axis=1)
-        # notBottom = 1 - np.roll(mask_final, -1, axis=1)
-        edges = (np.logical_xor(notLeft, proc) +
-                 np.logical_xor(notTop, proc)
-                 )
-
-        structure = np.ones((3, 3))
-        labeled_edges, num_features = ndimage.label(edges[1:-1], structure=structure)
-        print(num_features)
-        unique, counts = np.unique(labeled_edges, return_counts=True)
-        bands = []
-        for u, c in zip(unique, counts):
-            if c > 100 and u != 0:
-                band = np.argwhere(labeled_edges == u)
-                bands.append(band)
-
-        print(bands)
-        """
         if plot:
             print('Plotting')
             fig = plt.figure()
@@ -253,5 +236,6 @@ class Image:
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')
             fig.savefig('img/out/filter.png', dpi=600, interpolation='none')
+
         print('Features detected in', str(round(time.time() - t0, 2)), 's')
         return proc  # , loss
