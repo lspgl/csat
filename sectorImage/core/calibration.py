@@ -10,6 +10,7 @@ from operator import attrgetter
 
 from toolkit.line import Line
 from toolkit.intersection import Intersection
+from toolkit.skeleton import find_skeleton
 
 import itertools
 
@@ -56,28 +57,44 @@ class Calibrator:
         im = ndimage.imread(fn, flatten=True)
         # Blur out fast features
         print('Blurring')
-        gaussian = ndimage.gaussian_filter(im, sigma=3)
+        gaussian = ndimage.gaussian_filter(im, sigma=5)
         # Edge detection filter
         print('Prewitt Filtering')
         derivative = np.abs(ndimage.prewitt(gaussian, axis=0))
+        derivative *= 255 / np.max(derivative)
 
         # Binary thresholding
         print('Thresholding')
-        ret, thresh1 = cv2.threshold(derivative.astype('uint8'), 5, 255, cv2.THRESH_BINARY)
+        ret, thresh = cv2.threshold(derivative.astype('uint8'), 70, 255, cv2.THRESH_BINARY)
         # Morphological opening
         print('Morphology')
-        op = ndimage.morphology.binary_opening(thresh1, iterations=2)
+        skel = find_skeleton(thresh)
+
+        #op = ndimage.morphology.binary_opening(thresh, iterations=5)
+        #op = ndimage.morphology.binary_closing(op, iterations=5)
 
         # Convert to int
-        op = op.astype('uint8')
+        op = skel.astype('uint8')
         if plot:
             draw = (im / np.max(im) * 100).astype('uint8')
 
+        preplot = False
+        if preplot and plot:
+            print('Plotting')
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.imshow(op)
+            fig.savefig('img/out/houghTransform.jpg', dpi=600)
         # Get probabilistic Hough transformation
         print('Computing Hough transform')
-        minLineLength = 1500
-        maxLineGap = 10
-        lines = cv2.HoughLinesP(op, 1, np.pi / 180, 100, minLineLength=minLineLength, maxLineGap=maxLineGap)
+        minLineLength = 1000
+        maxLineGap = 200
+        lines = cv2.HoughLinesP(op,
+                                rho=1,
+                                theta=np.pi / 180,
+                                threshold=1,
+                                minLineLength=minLineLength,
+                                maxLineGap=maxLineGap)
         print('Number of detected lines:', str(len(lines)))
         if plot:
             for line in lines:
@@ -136,8 +153,8 @@ class Calibrator:
         m_bin, m_edges = np.histogram(ms, bins='auto')
         avg_lines = []
         for i, b in enumerate(m_bin):
-            # Take only the 4 largest ridges
-            if b >= sorted(m_bin, reverse=True)[2] and b > 0:
+            # Take only the 3 largest ridges
+            if b >= sorted(m_bin, reverse=True)[2] and b > 1:
                 # Collect the lines in the histogram bins
                 ln_bin = []
                 e_low = m_edges[i]
@@ -235,7 +252,7 @@ class Calibrator:
 if __name__ == '__main__':
 
     fns = ['img/src/calibration/cpt' + str(i) + '.jpg' for i in range(1, 17)]
-    fns = ['img/src/calibration/cpt1.jpg']
+    fns = ['img/src/calibration/cpt4.jpg']
     # fns = ['../hardware/cpt' + str(i) + '.jpg' for i in range(1, 17)]
 
     c = Calibrator(fns)
