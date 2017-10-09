@@ -1,6 +1,6 @@
 import numpy as np
 import time
-from scipy import ndimage
+from scipy import ndimage, stats
 from .toolkit import vectools
 import matplotlib.pyplot as plt
 import matplotlib
@@ -12,10 +12,11 @@ import cv2
 class Image:
 
     def __init__(self, fn):
+        t0 = time.time()
         self.fn = fn
         print('Reading image', fn)
         self.image = ndimage.imread(self.fn, flatten=True)
-        print('Image loaded')
+        print('Image loaded in', str(round(time.time() - t0, 2)), 's')
         self.dimensions = np.shape(self.image)
         self.dimy, self.dimx = self.dimensions
 
@@ -174,66 +175,61 @@ class Image:
 
     def detectFeatures(self, matrix, plot=False):
         # Distinguish band from background in binary matrix
+        t0 = time.time()
+
+        # Initializing Empty array in Memory
+        proc = np.empty(np.shape(matrix))
+
+        print('Blurring')
+        # Gaussian Blur to remove fast features
+        cv2.GaussianBlur(src=matrix, ksize=(0, 3), dst=proc, sigmaX=3, sigmaY=0)
+
         print('Convolving')
-        kernel = [1, -2, 1]
-        #gaussian = ndimage.gaussian_filter1d(matrix, sigma=3, axis=1)
-        # laplacian = np.abs(ndimage.convolve1d(gaussian, kernel, axis=1))
-        equ0 = cv2.equalizeHist(matrix.astype('uint8'))
-        laplacian0 = np.abs(ndimage.prewitt(matrix, axis=1))
+        # Convolving with Prewitt kernel in x-direction
+        prewitt_kernel = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
+        cv2.filter2D(src=proc, kernel=prewitt_kernel, dst=proc, ddepth=-1)
+        np.abs(proc, out=proc)
 
-        # morph_lap = np.abs(ndimage.morphological_laplace(matrix, size=3))
-
-        equ = cv2.equalizeHist(laplacian0.astype('uint8'))
-        equ = equ.astype('float32')
-        lowpass = 0.5
-        equ[equ < lowpass * np.max(equ)] = 0
-
-        laplacian = laplacian0 * (1.0 / equ.max())
-        laplacian0 = ndimage.morphology.black_tophat(laplacian0, size=11)
-
-        # Threshold to cancel noise outside the band region
         print('Thresholding')
-        thresh = 0.05
-        #binary = self.binaryThresholding(laplacian, thresh)
-        binary = ndimage.morphology.binary_opening(equ, iterations=2)
-        binary = ndimage.morphology.binary_closing(binary, iterations=2)
+        proc *= proc * (1.0 / proc.max())
+        thresh = 0.3
+        cv2.threshold(src=proc, dst=proc, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
 
-        print('Binary Closing')
-        # Closing to obtain continuous edge
-        """
-        structure = np.ones((11, 3))
-        mask = ndimage.morphology.binary_closing(binary, iterations=1, structure=structure)
-        # Crop mask to significant boundary
-        mask_cropped = mask[~np.all(mask == 0, axis=1)]
-        # Number of lost angles
-        loss = np.shape(matrix)[0] - np.shape(mask_cropped)[0]
-        """
-        mask_cropped = binary
+        print('Morphology')
+        morph_kernel = np.ones((5, 5), np.uint8)
+        cv2.morphologyEx(src=proc, dst=proc, op=cv2.MORPH_OPEN, iterations=1, kernel=morph_kernel)
+        cv2.morphologyEx(src=proc, dst=proc, op=cv2.MORPH_CLOSE, iterations=1, kernel=morph_kernel)
+
+        proc = proc.astype(np.uint8, copy=False)
         # binary_fill_holes closes all holes that are completely surrounded by True values
         # Since it does not close to the boundary of the image, artificial True paddings are
         # added. Upped and lower padding have to be added separately to avoid filling of the
         # Gap between bands.
 
         # Add True boundary to bottom to close lower edgmaske holes
-        print('Filling')
-        mask_low = np.vstack((binary, np.ones((1, np.shape(binary)[1]))))
-        mask_lowFill = ndimage.morphology.binary_fill_holes(mask_low)[:-1]
+        print('Connecting')
+        proc_inv = 1 - proc
+        n_labels, labels, l_stats, l_centroids = cv2.connectedComponentsWithStats(image=proc_inv, connectivity=4)
+        fieldsize = 1e5
+        gaps = []
+        for i, oc in enumerate(l_stats):
+            if oc[-1] > fieldsize:
+                gaps.append(i)
 
-        # Repeat for top boundary
-        mask_high = np.vstack((np.ones((1, np.shape(binary)[1])), mask_lowFill))
-        mask_allFill = ndimage.morphology.binary_fill_holes(mask_high)[1:]
+        for gap in gaps:
+            labels[labels == gap] = 0
+        labels[labels != 0] = 1
+        labels = labels.astype(np.uint8, copy=False)
+        cv2.bitwise_or(src1=proc, src2=labels, dst=proc)
 
-        mask_allFill = ndimage.morphology.binary_fill_holes(mask_cropped)
-        mask_inv = 1 - mask_allFill
-        mask_final = 1 - ndimage.morphology.binary_fill_holes(mask_inv)
         """
         print('Logical rolling')
-        notLeft = np.roll(mask_final, 1, axis=0)
+        notLeft = np.roll(proc, 1, axis=0)
         # notRight = 1 - np.roll(mask_final, -1, axis=0)
-        notTop = np.roll(mask_final, 1, axis=1)
+        notTop = np.roll(proc, 1, axis=1)
         # notBottom = 1 - np.roll(mask_final, -1, axis=1)
-        edges = (np.logical_xor(notLeft, mask_final) +
-                 np.logical_xor(notTop, mask_final)
+        edges = (np.logical_xor(notLeft, proc) +
+                 np.logical_xor(notTop, proc)
                  )
 
         structure = np.ones((3, 3))
@@ -252,9 +248,10 @@ class Image:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.imshow(laplacian)
+            ax.imshow(proc)
+
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')
             fig.savefig('img/out/filter.png', dpi=600, interpolation='none')
-
-        return mask_final  # , loss
+        print('Features detected in', str(round(time.time() - t0, 2)), 's')
+        return proc  # , loss
