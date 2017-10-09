@@ -15,7 +15,7 @@ class SingleImage:
                                                        resolution=resolution,
                                                        interpolationOrder=interpolationOrder)
         # self.features, self.loss = self.img.detectFeatures(angularLines, plot=True)
-        self.features = self.img.detectFeatures(angularLines, plot=True)
+        self.features = self.img.detectFeatures(angularLines, plot=False)
         # self.angles = self.angles[int(self.loss / 2):int(-self.loss / 2)]
         if npz is not None:
             print('Storing Features in', npz)

@@ -147,7 +147,7 @@ class Walker:
         self.endpoints.append(copy.copy(self.position))
         # Deactivate the walker
         self.active = False
-
+        print('Regular Line Detected')
         return path
 
     def rotatePath(self, path, lx, ly, mode):
@@ -169,7 +169,7 @@ class Walker:
     def scanBottom(self, matrix, mode):
         # Scan from the bottom of the image to find a band which has
         # no boundary on the top
-        print('Scanning Bottom')
+        print('Scanning Bottom with', mode)
         # Reset position of walker
         self.position = [0, 0]
         if mode == 'rot':
@@ -291,6 +291,7 @@ class Walker:
         # to remove small features either generated through noise or
         # local features on the band
         print('Interpolating Fast Features')
+        # smoothing = 0
         self.rsplines = []
         self.phis = []
         for path in self.paths:

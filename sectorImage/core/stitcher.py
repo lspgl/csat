@@ -27,8 +27,9 @@ class Stitcher:
             for fn in self.fns:
                 npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
                 im = singleImage.SingleImage(fn)
-                im.getFeatures(npz=npzfn)
-                im.setFeatures(npz=npzfn)
+                # im.getFeatures(npz=npzfn)
+                im.getFeatures()
+                # im.setFeatures(npz=npzfn)
                 im.getLines()
                 self.images.append(im)
 
@@ -50,7 +51,8 @@ class Stitcher:
 def singleRoutine(fn):
     npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
     im = singleImage.SingleImage(fn)
-    im.getFeatures(npz=npzfn)
-    im.setFeatures(npz=npzfn)
+    # im.getFeatures(npz=npzfn)
+    im.getFeatures()
+    # im.setFeatures(npz=npzfn)
     im.getLines()
     return im
