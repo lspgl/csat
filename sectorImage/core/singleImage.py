@@ -1,6 +1,7 @@
 from . import image
 from . import linewalker
 from . import lineParser as lp
+from .midpoints import findMidpoints
 import numpy as np
 
 
@@ -16,6 +17,7 @@ class SingleImage:
                                                        interpolationOrder=interpolationOrder)
         # self.features, self.loss = self.img.detectFeatures(angularLines, plot=True)
         self.features = self.img.detectFeatures(angularLines, plot=False)
+        findMidpoints(self.features)
         # self.angles = self.angles[int(self.loss / 2):int(-self.loss / 2)]
         if npz is not None:
             print('Storing Features in', npz)
