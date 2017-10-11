@@ -1,8 +1,8 @@
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
-# from .toolkit import noise
 import scipy
+import time
 
 # Walker class to follow band edges
 # Edge coordinates are calculated for each band
@@ -147,7 +147,6 @@ class Walker:
         self.endpoints.append(copy.copy(self.position))
         # Deactivate the walker
         self.active = False
-        print('Regular Line Detected')
         return path
 
     def rotatePath(self, path, lx, ly, mode):
@@ -216,6 +215,7 @@ class Walker:
             self.sides.append('l')
 
     def scanMultiple(self, matrix, plot=False):
+        t0 = time.time()
         # Scan all lines in an image
         print('Scanning for Lines')
         # Containers for paths and if it's an inner or outer edge
@@ -285,6 +285,7 @@ class Walker:
                 ax.plot(*list(zip(*path)), color=color, lw=0.1)
             ax.set_ylim([0, 5000])
             fig.savefig('img/out/walker.png', dpi=300)
+        print('Linewalker completed in', str(round(time.time() - t0, 2)), 's')
 
     def fastFeatures(self, smoothing=1e4, plot=False):
         # Interpolate paths with an univariate spline with a smoothing term
