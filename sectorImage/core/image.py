@@ -1,6 +1,6 @@
 import numpy as np
 import time
-from scipy import ndimage, stats
+from scipy import ndimage
 from .toolkit import vectools
 import matplotlib.pyplot as plt
 import matplotlib
@@ -15,7 +15,8 @@ class Image:
         t0 = time.time()
         self.fn = fn
         print('Reading image', fn)
-        self.image = ndimage.imread(self.fn, flatten=True)
+        self.image = cv2.imread(self.fn, cv2.IMREAD_GRAYSCALE)
+        self.image = np.rot90(self.image)
         print('Image loaded in', str(round(time.time() - t0, 2)), 's')
         self.dimensions = np.shape(self.image)
         self.dimy, self.dimx = self.dimensions
@@ -213,8 +214,8 @@ class Image:
         fieldsize = 1e5
         # Label background fields
         gaps = []
-        for i, oc in enumerate(l_stats):
-            if oc[-1] > fieldsize:
+        for i, stat in enumerate(l_stats):
+            if stat[-1] > fieldsize:
                 gaps.append(i)
 
         # Set background fields to zero
