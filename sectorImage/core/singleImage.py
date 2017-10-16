@@ -12,9 +12,11 @@ class SingleImage:
 
     def getFeatures(self, radius=5000, interpolationOrder=1, resolution=None, npz=None):
         self.img = image.Image(self.fn)
+
         angularLines, self.angles = self.img.lineSweep(radius,
                                                        resolution=resolution,
                                                        interpolationOrder=interpolationOrder)
+        self.coverage = self.img.thetaCovered
         # self.features, self.loss = self.img.detectFeatures(angularLines, plot=True)
         self.features = self.img.detectFeatures(angularLines, plot=False)
 
@@ -30,12 +32,11 @@ class SingleImage:
         self.angles = npzfile['a']
 
     def getLines(self):
-        midpoints.Walker(self.features)
+        self.walker = midpoints.Walker(self.features)
+        self.r, self.phi = self.walker.walkSkeleton(plot=False, maxwidth=10,)
         #self.walker = linewalker.Walker()
         # self.walker.scanMultiple(self.features)
         #self.rbands, self.phis = self.walker.fastFeatures(plot=True)
-
-        #self.rbands, self.phis = lp.LineParser(self.features)
 
     def __repr__(self):
         retstr = 'Image Processing Object for ' + str(self.fn)

@@ -77,6 +77,9 @@ class Image:
         thetaPlus = -math.asin(lplus / rmax)
         thetaMinus = math.asin(lminus / rmax)
 
+        self.thetaCovered = np.abs(thetaPlus - thetaMinus)
+        print('Angular Coverage: ' + str(round(self.thetaCovered * 180 / np.pi, 2)) + '°')
+
         # Number of measurement lines
         if resolution is None:
             resolution = self.dimy

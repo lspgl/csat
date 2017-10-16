@@ -18,6 +18,7 @@ class Stitcher:
     def loadImages(self):
 
         if self.mpflag:
+            mp.set_start_method('spawn')
             ncpus = mp.cpu_count()
             pool = mp.Pool(ncpus)
             self.images = pool.map(singleRoutine, self.fns)
@@ -36,8 +37,11 @@ class Stitcher:
     def stitchImages(self, plot=True):
         fig = plt.figure()
         ax = fig.add_subplot(111)
+        ref_point = 0
         for i, image in enumerate(self.images):
-            for rs, phis in zip(image.rbands, image.phis):
+            for rs, phis in zip(image.r, image.phi):
+                #ref_point += len(phis) * image.coverage
+                #phis = np.array(phys) + ref_point
                 phis = np.array(phis) + i * 1900
                 ax.plot(phis, rs, color='black', lw=0.5)
 

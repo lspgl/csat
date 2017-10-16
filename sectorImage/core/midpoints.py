@@ -9,16 +9,18 @@ class Walker:
     def __init__(self, image):
         self.image = image
         self.skeleton = self.skeletonize(self.image)
+
+    def walkSkeleton(self, plot=False, maxwidth=10):
         t0 = time.time()
-        self.maxwidth = 10
-        self.coords, self.launchpoints, self.endpoints, self.terminatinos = self.scan(
-            self.skeleton, maxwidth=self.maxwidth)
+
+        coords, launchpoints, endpoints, terminatinos = self.scan(
+            self.skeleton, maxwidth=maxwidth)
         print('Scan time Top:', str(round(time.time() - t0, 2)), 's')
 
         t0 = time.time()
         t_skeleton = np.flipud(self.skeleton)
         t_coords, t_launchpoints, t_endpoints, t_terminations = self.scan(
-            t_skeleton, maxwidth=self.maxwidth)
+            t_skeleton, maxwidth=maxwidth)
         print('Scan time Bottom:', str(round(time.time() - t0, 2)), 's')
 
         t0 = time.time()
@@ -26,37 +28,29 @@ class Walker:
         #ud_launchpoints = [[self.skeleton.shape[0] - 1 - lp[0], lp[1]] for lp in t_launchpoints]
         ud_endpoints = [[self.skeleton.shape[0] - 1 - ep[0], ep[1]] for ep in t_endpoints]
         print('Transformation time:', str(round(time.time() - t0, 2)), 's')
-        ud_detection = []
         for i, p in enumerate(ud_endpoints):
-            p_ext = [[p[0], p[1] + width] for width in range(-self.maxwidth // 2, self.maxwidth // 2)]
-            check = True in [p in self.launchpoints for p in p_ext]
+            p_ext = [[p[0], p[1] + width] for width in range(-maxwidth // 2, maxwidth // 2)]
+            check = True in [p in launchpoints for p in p_ext]
             if not check:
-                self.coords.append(ud_coords[i])
-                # ud_detection.append(i)
+                coords.append(ud_coords[i])
+                launchpoints.append(ud_endpoints[i])
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        """
-        for c in ud_coords:
-            ax.plot(*zip(*c), color='red', lw=0.1)
-        """
-        for c in self.coords:
-            ax.plot(*zip(*c), color='black', lw=0.1)
-        fig.savefig('img/out/logic.png', dpi=600)
+        r, phi = self.splitCoords(coords)
+        # TODO: Coords need to be sorted after insertion of an UD band
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            for c in coords:
+                ax.plot(*zip(*c), color='black', lw=0.1)
+            fig.savefig('img/out/logic.png', dpi=600)
 
-    def logic(self, binary):
-        print('Binary logic')
-        t0 = time.time()
-        mask = np.roll(binary, shift=1)
-        np.logical_xor(mask, binary, out=mask)
-        rising = np.logical_and(binary, mask)
-        np.logical_not(binary, out=binary)
-        np.logical_and(binary, mask, out=binary)
-        falling = np.roll(binary, shift=-1)
-        #logic = rising + 2 * falling
+        return (r, phi)
 
-        print('Logic time:', time.time() - t0)
-        return (rising.astype('uint8'), falling.astype('uint8'))
+    def splitCoords(self, coords):
+        r = [[b[1] for b in band] for band in coords]
+        phi = [[b[0] for b in band] for band in coords]
+
+        return (r, phi)
 
     def skeletonize(self, img):
         t0 = time.time()
