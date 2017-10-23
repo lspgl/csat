@@ -9,6 +9,17 @@ import matplotlib.pyplot as plt
 class Stitcher:
 
     def __init__(self, fns, mpflag=True):
+        """
+        Stitching class to combine multiple processed images
+
+        Parameters
+        ----------
+        fns: List of strings
+            filenames to be read and combined. The combination is done in the order of the supplied list
+        mpflag: bool, optional
+            multiprocessing flag. If on, the image processing is distributed over the available cores.
+            This disables plotting of individual images. Default is True
+        """
         self.fns = fns
         self.images = []
         self.mpflag = mpflag
@@ -16,6 +27,9 @@ class Stitcher:
         print('Preprocessing images')
 
     def loadImages(self):
+        """
+        Initialize the SingleImage instances and process the images.
+        """
 
         if self.mpflag:
             mp.set_start_method('spawn')
@@ -35,6 +49,14 @@ class Stitcher:
                 self.images.append(im)
 
     def stitchImages(self, plot=True):
+        """
+        Stitch the parametrized band midpoints and plot the output
+
+        Parameters
+        ----------
+        plot: bool, optional
+            plot the output. Default True
+        """
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ref_point = 0
@@ -48,11 +70,27 @@ class Stitcher:
         fig.savefig('img/out/stitched.png', dpi=300)
 
     def pickleSave(self, fn='stitcher.pkl'):
+        """
+        Save the class with the processed images to a pickled binary object
+
+        Parameters
+        ----------
+        fn: string
+            filename of the output
+        """
         p = pickler.Pickler()
         p.save(self, fn)
 
 
 def singleRoutine(fn):
+    """
+    Image processing routine to be parallelized
+
+    Parameters
+    ----------
+    fn: string
+        filename of the single image
+    """
     npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
     im = singleImage.SingleImage(fn)
     # im.getFeatures(npz=npzfn)
