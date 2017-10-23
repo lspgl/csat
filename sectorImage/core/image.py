@@ -12,6 +12,14 @@ import cv2
 class Image:
 
     def __init__(self, fn):
+        """
+        Image processing class
+
+        Parameters
+        ----------
+        fn: string
+            filename of the image to be processed
+        """
         t0 = time.time()
         self.fn = fn
         print('Reading image', fn)
@@ -22,9 +30,18 @@ class Image:
         self.dimy, self.dimx = self.dimensions
 
     def profileLine(self, p0, p1, img=None, interpolationOrder=1):
-        # Generate an interpolated profile of the image matrix between points
-        # p0, p1 with a resolution defined by the distance between the points
-        # to avoid unnecessary interpolation where no information exists
+        """
+        Generate an interpolated profile of the image matrix between 2 points
+
+        Parameters
+        ----------
+        p0, p1: tuples of floats
+            two points (x,y) between which to interpolate
+        img: 2D array, optional
+            source image. If none, the image specified during class instantation is used. Default is None
+        interpolationOrder: int, optional
+            order of the interpolation polynom for the coordinate transform. Default is 1
+        """
 
         if img is None:
             img = self.image
@@ -39,14 +56,31 @@ class Image:
         return zi
 
     def lineSweep(self, r, dr=0, resolution=None, interpolationOrder=1, plot=False):
-        # Creates a transformed image where a sector is mapped to r/phi coordinates
-        # The matrix is interpolated along the angled measurement lines
-        #
-        # r: Radius relative to the recorded image within the sector is recorded
-        # dr: Distance from edge of image to geometric center of spiral
-        # resolution: number of measurement lines. If None, the y-dimension of the image will be used
-        # interpolationOrder: Polynomial order of interpolation algorithm between two pixels
-        # plot: Plot the transformed image
+        """
+        Creates a transformed image where a sector is mapped to r/phi coordinates
+        The matrix is interpolated along the angled measurement lines
+
+        Parameters
+        ----------
+        r: float
+            Radius relative to the recorded image within the sector is recorded
+        dr: float, optional
+            Distance from edge of image to geometric center of spiral. Default is 0
+        resolution: int
+            number of measurement lines. If None, the y-dimension of the image will be used
+        interpolationOrder: int, optional
+            Polynomial order of interpolation algorithm between two pixels. Default is 1
+        plot: bool, optional
+            Plot the transformed image. Default is False
+            Cannot be used if multiprocessing is active
+
+        Returns
+        -------
+        linesnew: 2D array
+            Coordinate transformed image
+        angles: 1D array of floats
+            angles between which the image is sweeped
+        """
 
         print('Sweeping line with radius', r)
         # Pre-Cropping image to maximum size defined by measurement radius
@@ -163,14 +197,6 @@ class Image:
 
         return np.array(linesnew), angles
 
-    def binaryThresholding(self, matrix, thresh):
-        # Threshold float matrix at the thresh value
-        # Returns a binary matrix, usable for morphology
-        binary = np.copy(matrix)
-        binary[binary <= thresh] = False
-        binary[binary > thresh] = True
-        return binary
-
     # ******************************************************************************************
     # ******************************************************************************************
 
@@ -178,7 +204,23 @@ class Image:
     # ******************************************************************************************
 
     def detectFeatures(self, matrix, plot=False):
-        # Distinguish band from background in binary matrix
+        """
+        Distinguish band from background in binary matrix
+
+        Parameters
+        ----------
+        matrix: 2D array
+            8Bit single channel source matrix to be processed
+        plot: bool, optional
+            Plot the transformed image. Default is False
+            Cannot be used if multiprocessing is active
+
+        Returns
+        -------
+        proc: 2D array
+            Processed binary image
+
+        """
         t0 = time.time()
 
         # Initializing Empty array in Memory
