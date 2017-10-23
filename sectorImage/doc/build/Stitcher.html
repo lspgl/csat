@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+<title>CSAT</title>
+<style>@charset "utf-8";
+
+html {
+	height:100%;
+	margin:0;
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
+body {
+	background-color:#fff;
+	font-family:Roboto;
+	color:#2b2b2b;
+	margin:0px;
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
+.headlink{
+	text-decoration: None !important;
+	color: #2b2b2b;
+}
+
+#docWrapper{
+  white-space: pre-wrap;
+  margin-left:40px;
+	display: block;
+	width: auto;
+	height: auto;
+	overflow: visible;
+}
+
+#header {
+	background-color:#00695C;
+  color:#fff;
+  font-size: 30px;
+	height:120px;
+	width: 100%;
+	padding:30px 40px 0px 40px;
+  line-height:30px;
+	box-sizing: border-box;
+	box-shadow: 0px 5px 20px rgba(0,0,0,0.1);
+}
+
+.mod_name {
+	font-weight: 300;
+	font-style: italic;
+	color:#9d9d9d;
+}
+
+.func_name {
+	font-weight: 700;
+	color:#00695c;
+}
+
+.docstring {
+	margin-left:40px;
+}
+
+.paramTitle{
+	color: #00695C
+}
+
+.params{
+	margin-left:40px;
+}
+
+.variable {
+	font-weight: 700;
+}
+
+.type {
+	font-weight: 300;
+	font-style: italic;
+}
+
+.variable_desc {
+	margin-left:40px;
+}
+
+@media print {
+							 #docWrapper{
+								width: 100%;
+								height: 100%;
+								display: block;
+								width: auto;
+								height: auto;
+								overflow: visible;
+							 }
+						 }
+</style>
+
+<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i" rel="stylesheet">
+<link rel="icon"
+      type="image/x-icon"
+      href="img/favicon.ico">
+</head>
+<body>
+<div id='header'>
+CSAT Computer Vision<br />
+<span style='font-weight:300; font-size:20px'>Stitcher</span></div>
+<div id=docWrapper>
+<hr><span class=mod_name>Stitcher.</span><span class=func_name id=__init__>__init__</span>(self, fns, mpflag=True)
+<div class=docstring>
+Stitching class to combine multiple processed images
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>fns</span>: <span class=type>List of strings</span>
+<div class=variable_desc>filenames to be read and combined. The combination is done in the order of the supplied list
+</div><span class=variable>mpflag</span>: <span class=type>bool, optional</span>
+<div class=variable_desc>multiprocessing flag. If on, the image processing is distributed over the available cores.
+This disables plotting of individual images. Default is True
+</div></div></div>
+
+<hr><span class=mod_name>Stitcher.</span><span class=func_name id=loadImages>loadImages</span>(self)
+<div class=docstring>
+Initialize the SingleImage instances and process the images.
+</div>
+
+<hr><span class=mod_name>Stitcher.</span><span class=func_name id=pickleSave>pickleSave</span>(self, fn='stitcher.pkl')
+<div class=docstring>
+Save the class with the processed images to a pickled binary object
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>fn</span>: <span class=type>string</span>
+<div class=variable_desc>filename of the output
+</div></div></div>
+
+<hr><span class=mod_name>Stitcher.</span><span class=func_name id=stitchImages>stitchImages</span>(self, plot=True)
+<div class=docstring>
+Stitch the parametrized band midpoints and plot the output
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>plot</span>: <span class=type>bool, optional</span>
+<div class=variable_desc>plot the output. Default True
+</div></div></div>
+
+</div>
+</body>
+</html>
+

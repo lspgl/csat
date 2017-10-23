@@ -1,8 +1,8 @@
 import inspect
 import sys
 import os
-# sys.path.append(os.path.abspath('../'))
-# sys.path.append(os.path.abspath('./'))
+import pkgutil
+
 __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
 sys.path.append(__location__ + '/../')
@@ -36,25 +36,32 @@ def parseTemplate(fn, fn_css='css/style.css'):
         if '@_' not in ln:
             block += ln + '\n'
         else:
-            proc.append(block)
             start = ln.index('@_')
             trimm = ln[start:]
+            block += ln[:start]
+            proc.append(block)
+            block = ''
             if ' ' in trimm:
                 end = trimm.index(' ')
                 key = trimm[:end]
+                block += trimm[end:]
+            elif '<' in trimm:
+                end = trimm.index('<')
+                key = trimm[:end]
+                block += trimm[end:]
             else:
                 key = trimm
             idx = len(proc)
             key = key[2:]
             marker[key] = idx
             proc.append(key)
-            block = ''
+
     if block != '':
         proc.append(block)
     return proc, marker
 
 
-def formatDoc(docDict):
+def formatDoc(docDict, cname):
     param_delim = '\nParameters\n----------\n'
     ret_delim = '\nReturns\n-------\n'
     maincontent = ''
@@ -63,8 +70,8 @@ def formatDoc(docDict):
         ret = False
         sig, doc = docDict[key]
 
-        func_string = ('<hr><span class=mod_name>Walker.</span>' +
-                       '<span class=func_name>' +
+        func_string = ('<hr><span class=mod_name>' + cname + '.</span>' +
+                       '<span class=func_name id=' + key + '>' +
                        key +
                        '</span>' + sig + '\n')
         if param_delim in doc:
@@ -128,20 +135,55 @@ def paramStyle(params, title):
     return retstr
 
 
-def makeHtml(proc, fn='api.html'):
+def makeDocPage(cl, template='template.html', build='build/'):
+    fn = cl.__name__ + '.html'
+    proc, marker = parseTemplate(template)
+    docDict = getDocFromClass(cl)
+    entries = [cl.__name__ + '.' + key for key in docDict]
+    maincontent = formatDoc(docDict, cl.__name__)
+    proc[marker['maincontent']] = maincontent
+    proc[marker['title']] = cl.__name__
     html = ''.join(s for s in proc)
-    with open(os.path.join(__location__, fn), 'w+') as f:
+
+    with open(__location__ + '/' + build + fn, 'w+') as f:
         f.write(html)
-    return html
+    return entries
 
 
-if __name__ == '__main__':
-    fn = 'api.template.html'
-    proc, marker = parseTemplate(fn)
-    from core.midpoints import Walker
-    docDict = getDocFromClass(Walker)
-    maincontent = formatDoc(docDict)
+def makeIndexPage(entries, template='template.html', build='build/'):
+    maincontent = ''
+    proc, marker = parseTemplate(template)
+    for e in entries:
+        name = e[0].split('.')[0]
+        maincontent += '<a href="' + name + '.html"><span class=func_name>' + name + '</span></a><br>'
+        for method in e:
+            method_name = method.split('.')[-1]
+            maincontent += ('<a href="' + name + '.html#' + method_name +
+                            '"><span class=mod_name>' + name + '.</span><span class=func_name>' + method_name + '</span></a><br>')
+        maincontent += '<br>'
 
     proc[marker['maincontent']] = maincontent
+    proc[marker['title']] = 'Class documentation'
+    html = ''.join(s for s in proc)
 
-    html = makeHtml(proc)
+    with open(__location__ + '/' + build + 'index.html', 'w+') as f:
+        f.write(html)
+
+
+def package_contents(package_name):
+    file, pathname, description = imp.find_module(package_name)
+    if file:
+        raise ImportError('Not a package: %r', package_name)
+    # Use a set because some may be both source and compiled.
+    return set([os.path.splitext(module)[0]
+                for module in os.listdir(pathname)
+                if module.endswith(('.py'))])
+
+if __name__ == '__main__':
+    from core.midpoints import Walker
+    from core.singleImage import SingleImage
+    from core.image import Image
+    from core.stitcher import Stitcher
+    classes = [Walker, SingleImage, Image, Stitcher]
+    entries = [makeDocPage(cl) for cl in classes]
+    makeIndexPage(entries)

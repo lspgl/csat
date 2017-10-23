@@ -104,10 +104,9 @@ body {
 <body>
 <div id='header'>
 CSAT Computer Vision<br />
-<span style='font-weight:300; font-size:20px'>Image Class</span>
-</div>
+<span style='font-weight:300; font-size:20px'>Image</span></div>
 <div id=docWrapper>
-<hr><span class=mod_name>Image.</span><span class=func_name>__init__</span>(self, fn)
+<hr><span class=mod_name>Image.</span><span class=func_name id=__init__>__init__</span>(self, fn)
 <div class=docstring>
 Image processing class
 
@@ -115,7 +114,7 @@ Image processing class
 <div class=variable_desc>filename of the image to be processed
 </div></div></div>
 
-<hr><span class=mod_name>Image.</span><span class=func_name>detectFeatures</span>(self, matrix, plot=False)
+<hr><span class=mod_name>Image.</span><span class=func_name id=detectFeatures>detectFeatures</span>(self, matrix, plot=False)
 <div class=docstring>
 Distinguish band from background in binary matrix
 
@@ -130,7 +129,7 @@ Cannot be used if multiprocessing is active
 </div><span class=type></span>
 <div class=variable_desc></div></div></div>
 
-<hr><span class=mod_name>Image.</span><span class=func_name>lineSweep</span>(self, r, dr=0, resolution=None, interpolationOrder=1, plot=False)
+<hr><span class=mod_name>Image.</span><span class=func_name id=lineSweep>lineSweep</span>(self, r, dr=0, resolution=None, interpolationOrder=1, plot=False)
 <div class=docstring>
 Creates a transformed image where a sector is mapped to r/phi coordinates
 The matrix is interpolated along the angled measurement lines
@@ -153,7 +152,7 @@ Cannot be used if multiprocessing is active
 <div class=variable_desc>angles between which the image is sweeped
 </div></div></div>
 
-<hr><span class=mod_name>Image.</span><span class=func_name>profileLine</span>(self, p0, p1, img=None, interpolationOrder=1)
+<hr><span class=mod_name>Image.</span><span class=func_name id=profileLine>profileLine</span>(self, p0, p1, img=None, interpolationOrder=1)
 <div class=docstring>
 Generate an interpolated profile of the image matrix between 2 points
 

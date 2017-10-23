@@ -104,10 +104,9 @@ body {
 <body>
 <div id='header'>
 CSAT Computer Vision<br />
-<span style='font-weight:300; font-size:20px'>Midpoint walker Class</span>
-</div>
+<span style='font-weight:300; font-size:20px'>Walker</span></div>
 <div id=docWrapper>
-<hr><span class=mod_name>Walker.</span><span class=func_name>__init__</span>(self, image)
+<hr><span class=mod_name>Walker.</span><span class=func_name id=__init__>__init__</span>(self, image)
 <div class=docstring>
 Class to scan a binary image and parametrize the band midpoints
 
@@ -115,7 +114,7 @@ Class to scan a binary image and parametrize the band midpoints
 <div class=variable_desc>Binary source image
 </div></div></div>
 
-<hr><span class=mod_name>Walker.</span><span class=func_name>rotatePath</span>(self, path, lx, ly)
+<hr><span class=mod_name>Walker.</span><span class=func_name id=rotatePath>rotatePath</span>(self, path, lx, ly)
 <div class=docstring>
 Rotate the coordinates of a path of an UD-flipped image with respect to the center of image with dimension lx,ly
 
@@ -130,7 +129,7 @@ Rotate the coordinates of a path of an UD-flipped image with respect to the cent
 <div class=variable_desc>flipped path
 </div></div></div>
 
-<hr><span class=mod_name>Walker.</span><span class=func_name>scan</span>(self, skeleton, maxwidth=10, nbands=inf)
+<hr><span class=mod_name>Walker.</span><span class=func_name id=scan>scan</span>(self, skeleton, maxwidth=10, nbands=inf)
 <div class=docstring>
 Scan the skeleton starting from the top left corner
 
@@ -151,7 +150,7 @@ Scan the skeleton starting from the top left corner
 <div class=variable_desc>Coordinates of band terminations which are not on an image boundary
 </div></div></div>
 
-<hr><span class=mod_name>Walker.</span><span class=func_name>skeletonize</span>(self, img)
+<hr><span class=mod_name>Walker.</span><span class=func_name id=skeletonize>skeletonize</span>(self, img)
 <div class=docstring>
 Morphological skeletonization of the binary image
 The image is eroded, dilated and subtracted before being compared with a logical or until one step before
@@ -164,7 +163,7 @@ the 0-image is obtained. The resulting image is the skeleton.
 <div class=variable_desc>skeletonized image
 </div></div></div>
 
-<hr><span class=mod_name>Walker.</span><span class=func_name>splitCoords</span>(self, coords)
+<hr><span class=mod_name>Walker.</span><span class=func_name id=splitCoords>splitCoords</span>(self, coords)
 <div class=docstring>
 Splitting coordinate tuples into discrete variables
 
@@ -175,7 +174,7 @@ Splitting coordinate tuples into discrete variables
 <div class=variable_desc>Coordinates of the parametrized band
 </div></div></div>
 
-<hr><span class=mod_name>Walker.</span><span class=func_name>walkSkeleton</span>(self, plot=False, maxwidth=10)
+<hr><span class=mod_name>Walker.</span><span class=func_name id=walkSkeleton>walkSkeleton</span>(self, plot=False, maxwidth=10)
 <div class=docstring>
 Walk the skeletonized image and return the band coordinates
 
