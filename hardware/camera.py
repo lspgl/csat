@@ -20,21 +20,37 @@ class Camera:
         if out == b'':
             print('No camera connected')
             self.camera_available = False
+            return False
         else:
             print('Camera connected')
             self.camera_available = True
+            return True
 
     def collectSingle(self, fn='single.jpg'):
         cmd = 'gphoto2 --set-config burstnumber=1 --force-overwrite --filename ' + fn + ' --capture-image-and-download'
         c = Popen(cmd, shell=True, stdout=PIPE)
         c.wait()
 
-    def collectSeries(self, n=8):
+    def fireSeries(self, n=2):
+        cmd = ['gphoto2',
+               '--set-config', 'burstnumber=' + str(n),
+               '--capture-image',
+               '--filename=capture/cpt%n.jpg',
+               '--capture-tethered']
+        c = Popen(cmd, stdout=PIPE, stderr=PIPE)
+        c.communicate()
+        cmd = ['gphoto2',
+               '--delete-all-files']
+        c = Popen(cmd, stdout=PIPE, stderr=PIPE)
+        c.communicate()
+        return
+
+    def collectSeries(self, n=8, directory='capture'):
 
         cmd = ['gphoto2',
                '--set-config', 'burstnumber=' + str(n),
                '--capture-image-and-download',
-               '--filename=cpt%n.jpg',
+               '--filename=' + directory + '/cpt%n.jpg',
                '--capture-tethered',
                '--force-overwrite']
         c = Popen(cmd, stdout=PIPE, stderr=PIPE)

@@ -39,24 +39,31 @@ class Stepper:
         # Former tinkerconn
         # Connect to tinkerforge brick
         self.ipcon.connect(self.HOST, self.PORT)
+        self.ipcon.register_callback(IPConnection.CALLBACK_ENUMERATE, self.IPCcallback)
+        self.connected = False
+        self.ipcon.enumerate()
+        time.sleep(.1)
+        if self.connected:
+            # Configure motor
+            self.stepper.set_motor_current(self.current)
+            self.stepper.set_step_mode(self.mode)
+            self.stepper.set_max_velocity(self.vmax)
+            self.stepper.set_speed_ramping(self.ramping, self.ramping)
 
-        # Configure motor
-        self.stepper.set_motor_current(self.current)
-        self.stepper.set_step_mode(self.mode)
-        self.stepper.set_max_velocity(self.vmax)
-        self.stepper.set_speed_ramping(self.ramping, self.ramping)
+            # Enable Coils to lock motor position
+            self.stepper.enable()
 
-        # Enable Coils to lock motor position
-        self.stepper.enable()
+            # Establish proper coil alignment
+            self.stepper.set_steps(8)
+            time.sleep(0.1)
+            self.stepper.set_steps(-8)
 
-        # Establish proper coil alignment
-        self.stepper.set_steps(32)
-        time.sleep(0.1)
-        self.stepper.set_steps(-32)
-
-        self.enabled = True
-
-        return
+            self.enabled = True
+            return True
+        else:
+            self.ipcon.disconnect()
+            self.enabled = False
+            return False
 
     def disable(self):
         # Disable stepper and disconnect from tinkerforge brick
@@ -84,19 +91,21 @@ class Stepper:
             self.stepper.set_steps(steps)
             # Wait FPS Time of camera and release time (calibrated for shutter of 1/200)
             deadtime = 1.0 / 5.88
-            deadtime = 1.0/ 6.0
+            deadtime = 1.0 / 6.0
             time.sleep(deadtime)
         return
 
     def continuousRotation(self, t):
         totalSteps = self.normTurn * self.mode
-        speed = int(totalSteps/t)
+        speed = int(totalSteps / t)
         self.stepper.set_max_velocity(speed)
         self.stepper.set_steps(totalSteps)
         time.sleep(t)
         self.stepper.set_max_velocity(self.vmax)
         return
 
+    def IPCcallback(self, *params):
+        self.connected = True
 
 
 if __name__ == '__main__':
