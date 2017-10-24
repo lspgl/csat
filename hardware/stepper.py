@@ -39,7 +39,6 @@ class Stepper:
         # Former tinkerconn
         # Connect to tinkerforge brick
         self.ipcon.connect(self.HOST, self.PORT)
-<<<<<<< HEAD
 
         # Configure motor
         self.stepper.set_motor_current(self.current)
@@ -58,7 +57,7 @@ class Stepper:
         self.enabled = True
 
         return
-=======
+
         self.ipcon.register_callback(IPConnection.CALLBACK_ENUMERATE, self.IPCcallback)
         self.connected = False
         self.ipcon.enumerate()
@@ -84,7 +83,6 @@ class Stepper:
             self.ipcon.disconnect()
             self.enabled = False
             return False
->>>>>>> e4df83af1bd93001580509fef58ebd514cc48882
 
     def disable(self):
         # Disable stepper and disconnect from tinkerforge brick

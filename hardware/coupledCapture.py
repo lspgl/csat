@@ -1,3 +1,10 @@
+import sys
+import os
+
+__location__ = os.path.realpath(
+    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+sys.path.append(__location__)
+
 import stepper
 import camera
 from multiprocessing import Process
