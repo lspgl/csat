@@ -39,26 +39,6 @@ class Stepper:
         # Former tinkerconn
         # Connect to tinkerforge brick
         self.ipcon.connect(self.HOST, self.PORT)
-<<<<<<< HEAD
-
-        # Configure motor
-        self.stepper.set_motor_current(self.current)
-        self.stepper.set_step_mode(self.mode)
-        self.stepper.set_max_velocity(self.vmax)
-        self.stepper.set_speed_ramping(self.ramping, self.ramping)
-
-        # Enable Coils to lock motor position
-        self.stepper.enable()
-
-        # Establish proper coil alignment
-        self.stepper.set_steps(8)
-        time.sleep(.5)
-        self.stepper.set_steps(-8)
-
-        self.enabled = True
-
-        return
-=======
         self.ipcon.register_callback(IPConnection.CALLBACK_ENUMERATE, self.IPCcallback)
         self.connected = False
         self.ipcon.enumerate()
@@ -84,7 +64,6 @@ class Stepper:
             self.ipcon.disconnect()
             self.enabled = False
             return False
->>>>>>> e4df83af1bd93001580509fef58ebd514cc48882
 
     def disable(self):
         # Disable stepper and disconnect from tinkerforge brick
@@ -127,6 +106,7 @@ class Stepper:
 
     def IPCcallback(self, *params):
         self.connected = True
+
 
 if __name__ == '__main__':
     stepper = Stepper()
