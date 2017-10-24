@@ -126,6 +126,7 @@ class Stepper:
     def IPCcallback(self, *params):
         self.connected = True
 
+
 if __name__ == '__main__':
     stepper = Stepper()
     stepper.enable()
