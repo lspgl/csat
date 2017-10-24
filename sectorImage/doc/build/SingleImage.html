@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+<title>CSAT</title>
+<style>@charset "utf-8";
+
+html {
+	height:100%;
+	margin:0;
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
+body {
+	background-color:#fff;
+	font-family:Roboto;
+	color:#2b2b2b;
+	margin:0px;
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
+.headlink{
+	text-decoration: None !important;
+	color: #2b2b2b;
+}
+
+#docWrapper{
+  white-space: pre-wrap;
+  margin-left:40px;
+	display: block;
+	width: auto;
+	height: auto;
+	overflow: visible;
+}
+
+#header {
+	background-color:#00695C;
+  color:#fff;
+  font-size: 30px;
+	height:120px;
+	width: 100%;
+	padding:30px 40px 0px 40px;
+  line-height:30px;
+	box-sizing: border-box;
+	box-shadow: 0px 5px 20px rgba(0,0,0,0.1);
+}
+
+.mod_name {
+	font-weight: 300;
+	font-style: italic;
+	color:#9d9d9d;
+}
+
+.func_name {
+	font-weight: 700;
+	color:#00695c;
+}
+
+.docstring {
+	margin-left:40px;
+}
+
+.paramTitle{
+	color: #00695C
+}
+
+.params{
+	margin-left:40px;
+}
+
+.variable {
+	font-weight: 700;
+}
+
+.type {
+	font-weight: 300;
+	font-style: italic;
+}
+
+.variable_desc {
+	margin-left:40px;
+}
+
+@media print {
+							 #docWrapper{
+								width: 100%;
+								height: 100%;
+								display: block;
+								width: auto;
+								height: auto;
+								overflow: visible;
+							 }
+						 }
+</style>
+
+<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i" rel="stylesheet">
+<link rel="icon"
+      type="image/x-icon"
+      href="img/favicon.ico">
+</head>
+<body>
+<div id='header'>
+CSAT Computer Vision<br />
+<span style='font-weight:300; font-size:20px'>SingleImage</span></div>
+<div id=docWrapper>
+<hr><span class=mod_name>SingleImage.</span><span class=func_name id=__init__>__init__</span>(self, fn)
+<div class=docstring>
+Class for handling a single image
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=type></span>
+<div class=variable_desc></div><span class=variable>fn</span>: <span class=type>string</span>
+<div class=variable_desc>filename of source image
+</div></div></div>
+
+<hr><span class=mod_name>SingleImage.</span><span class=func_name id=getFeatures>getFeatures</span>(self, radius=5000, interpolationOrder=1, resolution=None, npz=None)
+<div class=docstring>
+Process the features of the image
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>radius</span>: <span class=type>float or int, optional</span>
+<div class=variable_desc>maximal radius which is analyzed. Depending on the midpoint this determines the maximally covered angle of the detectable region. Default is 5000
+</div><span class=variable>interpolationOrder</span>: <span class=type>int, optional</span>
+<div class=variable_desc>order of the interpolation polynom for the coordinate transform. Default is 1
+</div><span class=variable>resolution</span>: <span class=type>int, optional</span>
+<div class=variable_desc>number of pixel in an interpolation line. If None is given, the radius is taken as the size of a measurement line. Default is None
+</div><span class=variable>npz</span>: <span class=type>bool, optional</span>
+<div class=variable_desc>If True the results of the feature detection is stored in an .npz file. Default is None
+</div><span class=type></span>
+<div class=variable_desc></div></div></div>
+
+<hr><span class=mod_name>SingleImage.</span><span class=func_name id=getLines>getLines</span>(self)
+<div class=docstring>
+Parametrize the lines of the binary image
+
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>(r,phi)</span>: <span class=type>ndarray</span>
+<div class=variable_desc>parametrized coordinates of the band midpoints
+</div></div></div>
+
+<hr><span class=mod_name>SingleImage.</span><span class=func_name id=setFeatures>setFeatures</span>(self, npz)
+<div class=docstring>
+Recover features from an npz file
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>npz</span>: <span class=type>string</span>
+<div class=variable_desc>filename of the npz datafile
+</div></div></div>
+
+</div>
+</body>
+</html>
+

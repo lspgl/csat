@@ -12,6 +12,14 @@ import cv2
 class Image:
 
     def __init__(self, fn):
+        """
+        Image processing class
+
+        Parameters
+        ----------
+        fn: string
+            filename of the image to be processed
+        """
         t0 = time.time()
         self.fn = fn
         print('Reading image', fn)
@@ -22,9 +30,18 @@ class Image:
         self.dimy, self.dimx = self.dimensions
 
     def profileLine(self, p0, p1, img=None, interpolationOrder=1):
-        # Generate an interpolated profile of the image matrix between points
-        # p0, p1 with a resolution defined by the distance between the points
-        # to avoid unnecessary interpolation where no information exists
+        """
+        Generate an interpolated profile of the image matrix between 2 points
+
+        Parameters
+        ----------
+        p0, p1: tuples of floats
+            two points (x,y) between which to interpolate
+        img: 2D array, optional
+            source image. If none, the image specified during class instantation is used. Default is None
+        interpolationOrder: int, optional
+            order of the interpolation polynom for the coordinate transform. Default is 1
+        """
 
         if img is None:
             img = self.image
@@ -38,15 +55,74 @@ class Image:
         zi = ndimage.map_coordinates(img, np.vstack((y, x)), order=interpolationOrder, mode='nearest')
         return zi
 
+    def transformRadial(self, r, c, plot=False):
+        t0 = time.time()
+        dr = 454
+        rmax = r + dr
+
+        # TODO: Test if this is the right way around
+        cy = 2014
+        hplus = cy
+        hminus = 4000 - cy
+        # hplus = 5.0
+        # hminus = 6.0
+        htot = hplus + hminus
+
+        lplus = hplus / htot * self.dimy
+        lminus = hminus / htot * self.dimy
+
+        thetaPlus = -math.asin(lplus / rmax)
+        thetaMinus = math.asin(lminus / rmax)
+
+        thetaPlus_idx = int((thetaPlus + np.pi) / (2 * np.pi) * self.dimy)
+        thetaMinus_idx = int((thetaMinus + np.pi) / (2 * np.pi) * self.dimy)
+
+        out = cv2.linearPolar(self.image, c, rmax, cv2.WARP_FILL_OUTLIERS)
+        angles = np.linspace(thetaPlus, thetaMinus, thetaMinus_idx - thetaPlus_idx, endpoint=True)
+        self.dimensions = np.shape(out)
+        self.dimy, self.dimx = self.dimensions
+        out = out[thetaPlus_idx:thetaMinus_idx]
+        for i, line in enumerate(out[:]):
+            for pt in line:
+                if pt != 0:
+                    val = pt
+                    break
+            out[i][out[i] == 0] = val
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.imshow(out)
+            ax.set_aspect('auto')
+            fig.savefig('img/out/cv2transform.png', dpi=300)
+        print('Coordinate transformation completed in ', str(round(time.time() - t0, 2)), 's')
+        return out, angles
+
     def lineSweep(self, r, dr=0, resolution=None, interpolationOrder=1, plot=False):
-        # Creates a transformed image where a sector is mapped to r/phi coordinates
-        # The matrix is interpolated along the angled measurement lines
-        #
-        # r: Radius relative to the recorded image within the sector is recorded
-        # dr: Distance from edge of image to geometric center of spiral
-        # resolution: number of measurement lines. If None, the y-dimension of the image will be used
-        # interpolationOrder: Polynomial order of interpolation algorithm between two pixels
-        # plot: Plot the transformed image
+        """
+        Creates a transformed image where a sector is mapped to r/phi coordinates
+        The matrix is interpolated along the angled measurement lines
+
+        Parameters
+        ----------
+        r: float
+            Radius relative to the recorded image within the sector is recorded
+        dr: float, optional
+            Distance from edge of image to geometric center of spiral. Default is 0
+        resolution: int
+            number of measurement lines. If None, the y-dimension of the image will be used
+        interpolationOrder: int, optional
+            Polynomial order of interpolation algorithm between two pixels. Default is 1
+        plot: bool, optional
+            Plot the transformed image. Default is False
+            Cannot be used if multiprocessing is active
+
+        Returns
+        -------
+        linesnew: 2D array
+            Coordinate transformed image
+        angles: 1D array of floats
+            angles between which the image is sweeped
+        """
 
         print('Sweeping line with radius', r)
         # Pre-Cropping image to maximum size defined by measurement radius
@@ -76,6 +152,9 @@ class Image:
         # thetaTrue = math.asin(self.dimy / (2 * rmax))
         thetaPlus = -math.asin(lplus / rmax)
         thetaMinus = math.asin(lminus / rmax)
+
+        self.thetaCovered = np.abs(thetaPlus - thetaMinus)
+        print('Angular Coverage: ' + str(round(self.thetaCovered * 180 / np.pi, 2)) + '°')
 
         # Number of measurement lines
         if resolution is None:
@@ -156,17 +235,10 @@ class Image:
             ax.imshow(linesnew, aspect='auto')
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')
+
             fig.savefig('img/out/transformed.png', dpi=300)
 
         return np.array(linesnew), angles
-
-    def binaryThresholding(self, matrix, thresh):
-        # Threshold float matrix at the thresh value
-        # Returns a binary matrix, usable for morphology
-        binary = np.copy(matrix)
-        binary[binary <= thresh] = False
-        binary[binary > thresh] = True
-        return binary
 
     # ******************************************************************************************
     # ******************************************************************************************
@@ -175,12 +247,28 @@ class Image:
     # ******************************************************************************************
 
     def detectFeatures(self, matrix, plot=False):
-        # Distinguish band from background in binary matrix
+        """
+        Distinguish band from background in binary matrix
+
+        Parameters
+        ----------
+        matrix: 2D array
+            8Bit single channel source matrix to be processed
+        plot: bool, optional
+            Plot the transformed image. Default is False
+            Cannot be used if multiprocessing is active
+
+        Returns
+        -------
+        proc: 2D array
+            Processed binary image
+
+        """
         t0 = time.time()
 
         # Initializing Empty array in Memory
         proc = np.empty(np.shape(matrix))
-
+        matrix = matrix.astype(np.float64, copy=False)
         print('Blurring')
         # Gaussian Blur to remove fast features
         cv2.GaussianBlur(src=matrix, ksize=(0, 3), dst=proc, sigmaX=3, sigmaY=0)
@@ -190,11 +278,13 @@ class Image:
         prewitt_kernel = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
         cv2.filter2D(src=proc, kernel=prewitt_kernel, dst=proc, ddepth=-1)
         np.abs(proc, out=proc)
-
+        # plott = np.copy(proc)
         print('Thresholding')
+
         # Threshold to 30% for noise reduction
         proc *= proc * (1.0 / proc.max())
-        thresh = 0.3
+
+        thresh = 0.7
         cv2.threshold(src=proc, dst=proc, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
 
         print('Morphology')
@@ -211,7 +301,8 @@ class Image:
         n_labels, labels, l_stats, l_centroids = cv2.connectedComponentsWithStats(image=proc_inv, connectivity=4)
         # The maximum number of pixels in a noise field
         # Everything larger is considered to be background
-        fieldsize = 1e5
+        # fieldsize = 1e5
+        fieldsize = 1e4
         # Label background fields
         gaps = []
         for i, stat in enumerate(l_stats):
@@ -233,7 +324,7 @@ class Image:
             fig = plt.figure()
             ax = fig.add_subplot(111)
             ax.imshow(proc)
-
+            ax.set_aspect('auto')
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')
             fig.savefig('img/out/filter.png', dpi=600, interpolation='none')

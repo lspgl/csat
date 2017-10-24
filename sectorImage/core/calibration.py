@@ -1,261 +1,152 @@
 import numpy as np
-from scipy import ndimage
-from scipy.interpolate import interp1d
-from scipy.stats import gaussian_kde
 import cv2
-import matplotlib.pyplot as plt
+import time
 import math
+import matplotlib.pyplot as plt
+from scipy import optimize
 import multiprocessing as mp
-from operator import attrgetter
-
-from toolkit.line import Line
-from toolkit.intersection import Intersection
-from toolkit.skeleton import find_skeleton
-
-import itertools
 
 
 class Calibrator:
 
-    def __init__(self, fns):
+    def __init__(self, fns, mpflag=True):
         self.fns = fns
-        # self.images = [ndimage.imread(fn, flatten=True) for fn in self.fns]
+        self.mpflag = mpflag
 
-    def getMidpoints(self, save=True, mp_FLAG=True):
-        if mp_FLAG:
-            mp.set_start_method('spawn')
-            ncpus = mp.cpu_count()
-            pool = mp.Pool(ncpus)
-            payload = pool.map(self.houghTransform, self.fns)
-        else:
-            payload = [self.houghTransform(fn, plot=True) for fn in self.fns]
-        mps = [p[0] for p in payload]
-        self.i_pts = [p[1] for p in payload]
-        self.f_pts = [p[2] for p in payload]
-        # mps = [self.houghTransform(fn, plot=False) for fn in self.fns]
-        if save:
-            np.save('data/calibration.npy', mps)
-        return mps
-
-    def loadMidpoints(self, fn='data/calibration.npy'):
-        mps = np.load(fn)
-        print(mps)
-        return mps
-
-    def plotMidpoints(self, mps):
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(*zip(*mps), ms=5, lw=0.5, marker='x')
-        for i_pt, f_pt in zip(self.i_pts, self.f_pts):
-            for i, f in zip(i_pt, f_pt):
-                # ax.plot([i[0], f[0]], [i[1], f[1]], lw=0.1)
-                pass
-        fig.savefig('img/out/midpoints.png', dpi=300)
-
-    def houghTransform(self, fn, plot=False):
+    def computeMidpoint(self, fn, plot=False):
+        t0 = time.time()
         print('Reading image', fn)
-        im = ndimage.imread(fn, flatten=True)
-        # Blur out fast features
+        src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
+        src = np.rot90(src)
+        print('Image loaded in', str(round(time.time() - t0, 2)), 's')
+        src = src.astype(np.uint8, copy=False)
         print('Blurring')
-        gaussian = ndimage.gaussian_filter(im, sigma=5)
-        # Edge detection filter
-        print('Prewitt Filtering')
-        derivative = np.abs(ndimage.prewitt(gaussian, axis=0))
-        derivative *= 255 / np.max(derivative)
+        im = np.empty(np.shape(src), np.uint8)
+        imx = np.empty(np.shape(src), np.uint8)
+        # Gaussian Blur to remove fast features
+        cv2.GaussianBlur(src=src, ksize=(0, 5), dst=im, sigmaX=1, sigmaY=1)
+        cv2.equalizeHist(src=im, dst=im)
 
-        # Binary thresholding
+        print('Convolving')
+        # Convolving with kernel
+        prewitt_kernel_x = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
+        prewitt_kernel_y = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])
+        im = im.astype(np.int16, copy=False)
+        cv2.filter2D(src=im, kernel=prewitt_kernel_x, dst=im, ddepth=-1)
+        # cv2.filter2D(src=im, kernel=prewitt_kernel_y, dst=im, ddepth=-1)
+        np.abs(im, out=im)
+
         print('Thresholding')
-        ret, thresh = cv2.threshold(derivative.astype('uint8'), 70, 255, cv2.THRESH_BINARY)
-        # Morphological opening
-        print('Morphology')
-        skel = find_skeleton(thresh)
+        thresh = .5
+        cv2.threshold(src=im, dst=im, thresh=thresh * np.max(im), maxval=1, type=cv2.THRESH_BINARY)
 
-        #op = ndimage.morphology.binary_opening(thresh, iterations=5)
-        #op = ndimage.morphology.binary_closing(op, iterations=5)
+        pt_x = [np.argmax(line > 0) for i, line in enumerate(im)]
+        pt_y = np.arange(0, len(pt_x))
+        border_region = 1000
+        pt_y = [y for i, y in enumerate(pt_y) if pt_x[i] != 0 and pt_x[i] < border_region]
+        pt_x = [x for x in pt_x if x != 0 and x < border_region]
 
-        # Convert to int
-        op = skel.astype('uint8')
+        xc, yc, r, residu = self.leastsq_circle(pt_x, pt_y)
+
         if plot:
-            draw = (im / np.max(im) * 100).astype('uint8')
-
-        preplot = False
-        if preplot and plot:
-            print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.imshow(op)
-            fig.savefig('img/out/houghTransform.jpg', dpi=600)
-        # Get probabilistic Hough transformation
-        print('Computing Hough transform')
-        minLineLength = 1000
-        maxLineGap = 200
-        lines = cv2.HoughLinesP(op,
-                                rho=1,
-                                theta=np.pi / 180,
-                                threshold=1,
-                                minLineLength=minLineLength,
-                                maxLineGap=maxLineGap)
-        print('Number of detected lines:', str(len(lines)))
-        if plot:
-            for line in lines:
-                for x1, y1, x2, y2 in line:
-                    cv2.line(draw, (x1, y1), (x2, y2), 200, 1)
-                    pass
+            # ax.imshow(im[im.shape[0] // 2 - im.shape[0] // 4:im.shape[0] // 2 + im.shape[0] // 4,
+            #             im.shape[1] // 2 - im.shape[1] // 4:im.shape[1] // 2 + im.shape[1] // 4, ])
+            circle = plt.Circle((xc, yc), r, facecolor='none', lw=.5, edgecolor='red')
+            ax.scatter(xc, yc, marker='x', s=10)
+            ax.scatter(pt_x, pt_y, lw=.1, color='orange', marker='o', s=1)
 
-        # Initialize R and q for least squares crossing point estimation
-        R_matrix = np.array([[0., 0.], [0., 0.]])
-        q_vector = np.array([[0.], [0.]])
+            ax.imshow(im)
+            #ax.set_xlim(xc - 1.1 * r, xc + 1.1 * r)
+            #ax.set_ylim(yc - 1.1 * r, yc + 1.1 * r)
+            #ax.set_xlim(np.min(pt_x), np.max(pt_x))
+            ax.set_xlim(280, 670)
+            ax.set_aspect('auto')
+            ax.add_artist(circle)
+            fig.savefig('img/out/calibration_new.png', dpi=600)
 
-        # Iterate over detected Hough lines
-        i_pts = []
-        f_pts = []
-        print('Computing matrix elements')
-        avg_lines = self.linePooling(lines)
-        for ln in avg_lines:
-            r, q, a, n = ln[0].p2vect(confidence=ln[1])
-            if plot:
-                cv2.line(draw, (int(ln[0].x1), int(ln[0].y1)), (int(ln[0].x2), int(ln[0].y2)), 255, 5)
-            i_pts.append(a)
-            f_pts.append([sum(x) for x in zip(a, n)])
-            R_matrix += r
-            q_vector += q
+        return [xc, yc, r, pt_x, pt_y]
 
-        # Run least square fitting for Rm = q to find midpoint m
-        print('Computing least squares solution')
-        lsq = np.linalg.lstsq(R_matrix, q_vector)[0]
-        lsq_tuple = [lsq[0, 0], lsq[1, 0]]
-        print('Inferred Midpoint at', lsq_tuple)
+    def correction(self):
+        r = [c[2] for c in self.comp]
+        r_mean = np.array(r).mean()
+        out = []
+        for c in self.comp:
+            x = c[3]
+            y = c[4]
+            xc, yc, R, residu = self.leastsq_circle(x, y, w=1, fixedR=r_mean)
+            out.append([xc, yc, R])
 
-        if plot:
-            print('Plotting')
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
+        return out
 
-            ax.imshow(draw)
-            ax.scatter(*lsq, s=5, marker='x', color='red', lw=0.5)
-            fig.savefig('img/out/houghTransform.jpg', dpi=600)
+    def calc_R(self, x, y, xc, yc):
+        return np.sqrt((x - xc)**2 + (y - yc)**2)
 
-        return (lsq_tuple, i_pts, f_pts)
+    def f(self, c, x, y, w=1, fixedR=None):
+        Ri = self.calc_R(x, y, *c)
+        if fixedR is None:
+            delta = Ri - Ri.mean()
+        else:
+            delta = Ri - fixedR
+        delta_w = delta * w
+        return delta_w
 
-    def linePooling(self, lines_raw):
-        # Compound detected edges into a single line along a ridge
-        lines = []
-        ms = []
-        qs = []
-        # Convert lines to Line objects
-        for i, line_raw in enumerate(lines_raw):
-            line = Line(*line_raw[0], identifier=i)
-            lines.append(line)
-            ms.append(line.m)
-            qs.append(line.q)
+    def leastsq_circle(self, x, y, w=1, fixedR=None):
+        x_m = np.mean(x)
+        y_m = np.mean(y)
+        center_estimate = x_m, y_m
+        center, ier = optimize.leastsq(self.f, center_estimate, args=(x, y, w, fixedR))
+        xc, yc = center
+        Ri = self.calc_R(x, y, *center)
+        R = Ri.mean()
+        residu = np.sum((Ri - R)**2)
+        print('Residual:', residu)
+        return (xc, yc, R, residu)
 
-        # Histogram along slope to distinguish ridges
-        m_bin, m_edges = np.histogram(ms, bins='auto')
-        avg_lines = []
-        for i, b in enumerate(m_bin):
-            # Take only the 3 largest ridges
-            if b >= sorted(m_bin, reverse=True)[2] and b > 1:
-                # Collect the lines in the histogram bins
-                ln_bin = []
-                e_low = m_edges[i]
-                e_high = m_edges[i + 1]
-                for ln in lines:
-                    if ln.m >= e_low and ln.m <= e_high:
-                        ln_bin.append(ln)
-                # Compute the true position of the ridge
-                # self.rejectLines(ln_bin)
-                avg_lines.append(self.averageLines(ln_bin))
+    def computeAll(self, tofile=True):
+        self.comp = [self.computeMidpoint(fn) for fn in self.fns]
+        self.calibration_raw = [c[:3] for c in self.comp]
+        self.calibration = self.correction()
+        if tofile:
+            np.save('data/calibration.npy', np.array(self.calibration))
+        return self.calibration
 
-        return avg_lines
+    def loadCalibration(self, fn):
+        self.calibration = np.load(fn)
+        print(self.calibration)
+        return self.calibration
 
-    def rejectLines(self, line_bin):
-        print('Rejecting minor lines')
-        pairs = itertools.combinations(line_bin, 2)
-        for ln1, ln2 in pairs:
-            intersect = Intersection(ln1, ln2)
+    def oscillationCircle(self):
+        mps = [[x[0], x[1]] for x in self.calibration]
+        x, y, r, res = self.leastsq_circle(*zip(*mps))
+        x0 = mps[0][0]
+        y0 = mps[0][1]
 
-    def averageLines(self, line_bin):
-        # Take arbitrary start and end coordinates
-        x1_0 = 0
-        x2_0 = 7000
+        dx = x0 - x
+        dy = y0 - y
 
-        # Global average of the slope in a ridge
-        avg_correction_m = sum(line.m for line in line_bin) / float(len(line_bin))
+        theta = math.atan2(dy, dx)
 
-        # Vector along the global slope
-        correction_vect = [1, avg_correction_m]
-        corrected_lines = []
-        for i, ln in enumerate(line_bin):
-            # Generate a list of edges, all pointing along the same slope
-            dx, dy = correction_vect
-            x1 = ln.x1
-            y1 = ln.y1
-            x2 = x1 + dx
-            y2 = y1 + dy
-            ln_new = Line(x1, y1, x2, y2, identifier=i)
-            corrected_lines.append(ln_new)
-        # Sort the list along the intercept
-        corrected_lines.sort(key=lambda x: x.q)
-        # Sort the original list with unmodified slope along the intercepts of the corrected slope
-        id_order = [ln.identifier for ln in corrected_lines]
-        line_bin_s = [line_bin[i] for i in id_order]
+        oscillation = [x, y, r, theta]
+        print(oscillation)
+        return oscillation
 
-        # Get the change in intercept between two q-adjacent lines
-        delta_q = []
-        for i, ln in enumerate(corrected_lines[:-1]):
-            delta = corrected_lines[i + 1].q - ln.q
-            delta_q.append(delta)
-        """
-        qs = [ln.q for ln in corrected_lines]
-        kernel = gaussian_kde(qs, bw_method=2e-1)
-        x = np.linspace(qs[0], qs[-1], num=100)
-        kde = kernel(x)
+    def plotCalibration(self):
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.plot(x, kde)
-        ax.scatter(qs, np.zeros(len(qs)))
-        fig.savefig('img/out/intercepts_' + str(rand.randint(0, 4)) + '.png')
-        """
+        radii = [x[2] for x in self.calibration]
+        mr = np.mean(radii)
+        weights = 1
+        mps = [[x[0], x[1]] for x in self.calibration]
+        x, y, r, res = self.leastsq_circle(*zip(*mps), w=weights)
+        circle_fit = plt.Circle((x, y), r, lw=1, facecolor='none', edgecolor='red')
+        ax.add_artist(circle_fit)
 
-        # The largest jump in q should differentiate the upper from the lower edge
-        interface = delta_q.index(max(delta_q)) + 1
-        block_low = line_bin_s[:interface]
-        block_high = line_bin_s[interface:]
+        for i, mpt in enumerate(mps):
+            circle = plt.Circle((mpt[0], mpt[1]), np.abs(mr - radii[i]) / 5, lw=1, alpha=0.3)
+            ax.add_artist(circle)
+        ax.plot(*zip(*mps), marker='x')
 
-        # Get the xy values of all detected edges along an edge
-        xs_low = [ln.x1 for ln in block_low] + [ln.x2 for ln in block_low]
-        ys_low = [ln.y1 for ln in block_low] + [ln.y2 for ln in block_low]
-
-        xs_high = [ln.x1 for ln in block_high] + [ln.x2 for ln in block_high]
-        ys_high = [ln.y1 for ln in block_high] + [ln.y2 for ln in block_high]
-
-        # Linearly interpolate along an edge
-        m_low, q_low = np.polyfit(xs_low, ys_low, 1)
-        m_high, q_high = np.polyfit(xs_high, ys_high, 1)
-
-        # Equally weigh upper and lower edges (even if they don't have an equal amount of Hough lines)
-        avg_m = (m_low + m_high) / 2
-        avg_q = (q_low + q_high) / 2
-
-        # Generate a line with along the ridge
-        y1_0 = avg_m * x1_0 + avg_q
-        y2_0 = avg_m * x2_0 + avg_q
-
-        # The confidence for the least square fitting is the number of detected Hough lines
-        c = len(line_bin)
-        print(c)
-        c = 1
-
-        return (Line(x1_0, y1_0, x2_0, y2_0), c)
-
-
-if __name__ == '__main__':
-
-    fns = ['img/src/calibration/cpt' + str(i) + '.jpg' for i in range(1, 17)]
-    fns = ['img/src/calibration/cpt4.jpg']
-    # fns = ['../hardware/cpt' + str(i) + '.jpg' for i in range(1, 17)]
-
-    c = Calibrator(fns)
-    mps = c.getMidpoints(mp_FLAG=False)
-    # mps = c.loadMidpoints()
-    c.plotMidpoints(mps)
+        ax.set_aspect(1)
+        fig.savefig('img/out/calibrationTrace.png')
