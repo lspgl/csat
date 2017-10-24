@@ -64,7 +64,7 @@ class Stitcher:
             for rs, phis in zip(image.r, image.phi):
                 #ref_point += len(phis) * image.coverage
                 #phis = np.array(phys) + ref_point
-                phis = np.array(phis) + i * 1900
+                phis = np.array(phis) + i * 190
                 ax.plot(phis, rs, color='black', lw=0.5)
 
         fig.savefig('img/out/stitched.png', dpi=300)

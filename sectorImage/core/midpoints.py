@@ -213,8 +213,13 @@ class Walker:
                 else:
                     termination = -1
                 current.append(head[:])
-            coords.append(current[:])
-            endpoints.append(head[:])
+            # min_length = 500
+            min_length = 50
+            if len(current) > min_length:
+                coords.append(current[:])
+                endpoints.append(head[:])
+            else:
+                print('Line smaller than minimum length is discarded.')
             head = launchpoints[-1][:]
             while skeleton[head[0], head[1]]:
                 head[1] += 1
