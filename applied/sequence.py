@@ -56,6 +56,7 @@ class Sequence:
                 print(_C.RED + _C.BOLD + 'System not primed' + _C.ENDC)
                 print(_C.RED + 'Required for: ' + func.__name__ + _C.ENDC)
                 return None
+        return wrapper
 
     def _requiresCalibrated(func):
         """
@@ -79,17 +80,18 @@ class Sequence:
                 print(_C.RED + _C.BOLD + 'System not calibrated' + _C.ENDC)
                 print(_C.RED + 'Required for: ' + func.__name__ + _C.ENDC)
                 return None
+            return wrapper
 
     def prime(self):
-        """
+        """_requiresPrimed
         Priming the hardware
         Camera is triggered to ensure initial timing
         Stepper voltage is enabled
         """
         print(_C.CYAN + _C.BOLD + 'Priming camera and stepper' + _C.ENDC)
-        self.cam.fireSeries(n=3)
+        # self.cam.fireSeries(n=3)
         self.stp.enable()
-        if self.stp.enabled():
+        if self.stp.enabled:
             print(_C.LIME + 'System ready' + _C.ENDC)
             self.primed = True
         else:
@@ -101,7 +103,7 @@ class Sequence:
         Turning of the stepper voltage
         """
         print(_C.CYAN + _C.BOLD + 'Disabling stepper' + _C.ENDC)
-        self.stp.diable()
+        self.stp.disable()
         self.calibrated = False
         print(_C.LIME + 'Stepper voltage disabled' + _C.ENDC)
 
