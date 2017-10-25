@@ -269,17 +269,18 @@ class Image:
         # Initializing Empty array in Memory
         proc = np.empty(np.shape(matrix))
         matrix = matrix.astype(np.float64, copy=False)
-        print('Blurring')
+        # print('Blurring')
         # Gaussian Blur to remove fast features
         cv2.GaussianBlur(src=matrix, ksize=(0, 3), dst=proc, sigmaX=3, sigmaY=0)
+        plott = np.copy(proc)
 
-        print('Convolving')
+        # print('Convolving')
         # Convolving with Prewitt kernel in x-direction
         prewitt_kernel = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
         cv2.filter2D(src=proc, kernel=prewitt_kernel, dst=proc, ddepth=-1)
         np.abs(proc, out=proc)
         # plott = np.copy(proc)
-        print('Thresholding')
+        # print('Thresholding')
 
         # Threshold to 30% for noise reduction
         proc *= proc * (1.0 / proc.max())
@@ -287,7 +288,7 @@ class Image:
         thresh = 0.7
         cv2.threshold(src=proc, dst=proc, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
 
-        print('Morphology')
+        # print('Morphology')
         # Increase Noise reduction through binary morphology
         morph_kernel = np.ones((5, 5), np.uint8)
         cv2.morphologyEx(src=proc, dst=proc, op=cv2.MORPH_OPEN, iterations=1, kernel=morph_kernel)
@@ -295,7 +296,7 @@ class Image:
 
         proc = proc.astype(np.uint8, copy=False)
 
-        print('Connecting')
+        # print('Connecting')
         # Label the complement regions of the binary image
         proc_inv = 1 - proc
         n_labels, labels, l_stats, l_centroids = cv2.connectedComponentsWithStats(image=proc_inv, connectivity=4)

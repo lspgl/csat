@@ -24,8 +24,6 @@ class Stitcher:
         self.images = []
         self.mpflag = mpflag
 
-        print('Preprocessing images')
-
     def loadImages(self):
         """
         Initialize the SingleImage instances and process the images.
@@ -48,7 +46,7 @@ class Stitcher:
                 im.getLines()
                 self.images.append(im)
 
-    def stitchImages(self, plot=True):
+    def stitchImages(self, plot=False):
         """
         Stitch the parametrized band midpoints and plot the output
 
@@ -57,17 +55,18 @@ class Stitcher:
         plot: bool, optional
             plot the output. Default True
         """
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ref_point = 0
-        for i, image in enumerate(self.images):
-            for rs, phis in zip(image.r, image.phi):
-                #ref_point += len(phis) * image.coverage
-                #phis = np.array(phys) + ref_point
-                phis = np.array(phis) + i * 190
-                ax.plot(phis, rs, color='black', lw=0.5)
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ref_point = 0
+            for i, image in enumerate(self.images):
+                for rs, phis in zip(image.r, image.phi):
+                    #ref_point += len(phis) * image.coverage
+                    #phis = np.array(phys) + ref_point
+                    phis = np.array(phis) + i * 190
+                    ax.plot(phis, rs, color='black', lw=0.5)
 
-        fig.savefig('img/out/stitched.png', dpi=300)
+            fig.savefig('img/out/stitched.png', dpi=300)
 
     def pickleSave(self, fn='stitcher.pkl'):
         """

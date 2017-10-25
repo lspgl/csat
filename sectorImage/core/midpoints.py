@@ -47,12 +47,9 @@ class Walker:
         t_coords, t_launchpoints, t_endpoints, t_terminations = self.scan(
             t_skeleton, maxwidth=maxwidth)
         print('Scan time Bottom:', str(round(time.time() - t0, 2)), 's')
-
-        t0 = time.time()
         ud_coords = [[[self.skeleton.shape[0] - 1 - tc[0], tc[1]] for tc in t_coord] for t_coord in t_coords]
         # ud_launchpoints = [[self.skeleton.shape[0] - 1 - lp[0], lp[1]] for lp in t_launchpoints]
         ud_endpoints = [[self.skeleton.shape[0] - 1 - ep[0], ep[1]] for ep in t_endpoints]
-        print('Transformation time:', str(round(time.time() - t0, 2)), 's')
         for i, p in enumerate(ud_endpoints):
             p_ext = [[p[0], p[1] + width] for width in range(-maxwidth // 2, maxwidth // 2)]
             check = True in [p in launchpoints for p in p_ext]
@@ -123,7 +120,7 @@ class Walker:
             img, eroded = eroded, img  # Swap instead of copy
 
             if cv2.countNonZero(img) == 0:
-                print('Skeleton time:', str(round(time.time() - t0, 2)), 's')
+                print('Skeletonization in', str(round(time.time() - t0, 2)), 's')
                 return skeleton
 
     def scan(self, skeleton, maxwidth=10, nbands=np.inf):
@@ -158,6 +155,7 @@ class Walker:
         endpoints = []
         terminations = []
         bands_scanned = 0
+        outruns = 0
 
         while head[1] < skeleton.shape[1] - 1:
             current = []
@@ -168,7 +166,6 @@ class Walker:
                     # Advance head to first edge
                     head[1] += 1
             except IndexError:
-                print('reached end of image')
                 break
             current.append(head[:])
             launchpoints.append(head[:])
@@ -188,7 +185,7 @@ class Walker:
                         high = False
 
                 if edges > 1:
-                    print('line split termination at', head)
+                    # print('line split termination at', head)
                     terminations.append(head[:])
                     break
                 # Start by scanning to the right
@@ -207,7 +204,7 @@ class Walker:
                     head[1] = head_ref
                     termination += 1
                     if termination == 1:
-                        print('line outrun termination at ', head)
+                        # print('line outrun termination at ', head)
                         terminations.append(head[:])
                         break
                 else:
@@ -218,13 +215,15 @@ class Walker:
             if len(current) > min_length:
                 coords.append(current[:])
                 endpoints.append(head[:])
-            else:
-                print('Line smaller than minimum length is discarded.')
+                outruns += 1
+            # else:
+            #    print('Line smaller than minimum length is discarded.')
             head = launchpoints[-1][:]
             while skeleton[head[0], head[1]]:
                 head[1] += 1
             bands_scanned += 1
-
+        if len(terminations) - outruns > 0:
+            print('Detected', len(terminations) - outruns, 'terminations')
         return coords, launchpoints, endpoints, terminations
 
     def rotatePath(self, path, lx, ly):

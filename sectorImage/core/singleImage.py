@@ -38,12 +38,7 @@ class SingleImage:
         self.img = image.Image(self.fn)
 
         angularLines, self.angles = self.img.transformRadial(r=radius, c=(6454, 1986), plot=False)
-        """
-        angularLines, self.angles = self.img.lineSweep(radius,
-                                                       resolution=resolution,
-                                                       interpolationOrder=interpolationOrder)
 
-        """
         # self.coverage = self.img.thetaCovered
         # self.features, self.loss = self.img.detectFeatures(angularLines, plot=True)
         self.features = self.img.detectFeatures(angularLines, plot=False)
