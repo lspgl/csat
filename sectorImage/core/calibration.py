@@ -6,6 +6,12 @@ import matplotlib.pyplot as plt
 from scipy import optimize
 import multiprocessing as mp
 
+import sys
+import os
+
+__location__ = os.path.realpath(
+    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
 
 class Calibrator:
 
@@ -25,12 +31,12 @@ class Calibrator:
         imx = np.empty(np.shape(src), np.uint8)
         # Gaussian Blur to remove fast features
         cv2.GaussianBlur(src=src, ksize=(0, 5), dst=im, sigmaX=1, sigmaY=1)
-        cv2.equalizeHist(src=im, dst=im)
+        # cv2.equalizeHist(src=im, dst=im)
 
         print('Convolving')
         # Convolving with kernel
         prewitt_kernel_x = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
-        prewitt_kernel_y = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])
+        # prewitt_kernel_y = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])
         im = im.astype(np.int16, copy=False)
         cv2.filter2D(src=im, kernel=prewitt_kernel_x, dst=im, ddepth=-1)
         # cv2.filter2D(src=im, kernel=prewitt_kernel_y, dst=im, ddepth=-1)
@@ -64,7 +70,7 @@ class Calibrator:
             ax.set_xlim(280, 670)
             ax.set_aspect('auto')
             ax.add_artist(circle)
-            fig.savefig('img/out/calibration_new.png', dpi=600)
+            fig.savefig(__location__ + '/../img/out/calibration_new.png', dpi=600)
 
         return [xc, yc, r, pt_x, pt_y]
 
@@ -104,7 +110,7 @@ class Calibrator:
         print('Residual:', residu)
         return (xc, yc, R, residu)
 
-    def computeAll(self, tofile=True):
+    def computeAll(self, tofile=False):
         self.comp = [self.computeMidpoint(fn) for fn in self.fns]
         self.calibration_raw = [c[:3] for c in self.comp]
         self.calibration = self.correction()
@@ -149,4 +155,4 @@ class Calibrator:
         ax.plot(*zip(*mps), marker='x')
 
         ax.set_aspect(1)
-        fig.savefig('img/out/calibrationTrace.png')
+        fig.savefig(__location__ + '/../img/out/calibrationTrace.png')

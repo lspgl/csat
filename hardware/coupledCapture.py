@@ -12,7 +12,7 @@ import time
 
 
 def CoupledCapture(n, directory, stp, cam):
-    kwargs = {'n': n, 'directory': directory}
+    kwargs = {'n': n, 'directory': __location__ + '/' + directory}
     #sp = Process(target=stp.discreteRotation, kwargs=kwargs)
     cp = Process(target=cam.collectSeries, kwargs=kwargs)
     # sp.start()
@@ -24,6 +24,8 @@ def CoupledCapture(n, directory, stp, cam):
     fps = 6
     t = n * (1 / fps) + timeshift
     stp.continuousRotation(t=t)
+    cp.join()
+    print('done')
 
 
 if __name__ == '__main__':

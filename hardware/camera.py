@@ -38,11 +38,12 @@ class Camera:
                '--filename=capture/cpt%n.jpg',
                '--capture-tethered']
         c = Popen(cmd, stdout=PIPE, stderr=PIPE)
-        c.communicate()
+        time.sleep(1)
+        c.kill()
         cmd = ['gphoto2',
                '--delete-all-files']
         c = Popen(cmd, stdout=PIPE, stderr=PIPE)
-        c.communicate()
+        time.sleep(1)
         return
 
     def collectSeries(self, n=8, directory='capture'):
