@@ -8,10 +8,10 @@ from sequence import Sequence
 
 
 def main():
-    s = Sequence(offsite=True)
+    s = Sequence(offsite=False)
     s.prime()
-    # s.calibrate()
-    s.calibrated = True
+    s.calibrate()
+    # s.calibrated = True
     s.evaluate()
     s.disable()
 

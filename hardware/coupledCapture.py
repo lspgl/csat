@@ -23,7 +23,7 @@ def CoupledCapture(n, directory, stp, cam):
     timeshift = -0.05
     fps = 6
     t = n * (1 / fps) + timeshift
-    stp.continuousRotation(t=t)
+    stp.continuousRotation(t=t, nTurn=2)
     cp.join()
     print('done')
 

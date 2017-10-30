@@ -155,7 +155,7 @@ class Sequence:
         input(_C.YEL +
               'Insert Electrode and close door [Press any key when ready]' +
               _C.ENDC)
-        CoupledCapture(n=n, directory='capture', str=self.stp, cam=self.cam)
+        CoupledCapture(n=n, directory='capture', stp=self.stp, cam=self.cam)
         stitcher = EvaluationSequence(n=n, directory='hardware/capture')
         return stitcher
 

@@ -114,12 +114,12 @@ class Stepper:
             time.sleep(deadtime)
         return
 
-    def continuousRotation(self, t):
+    def continuousRotation(self, t, nTurn=2):
         totalSteps = self.normTurn * self.mode
         speed = int(totalSteps / t)
         self.stepper.set_max_velocity(speed)
-        self.stepper.set_steps(totalSteps)
-        time.sleep(t)
+        self.stepper.set_steps(totalSteps * nTurn)
+        time.sleep(t * nTurn)
         self.stepper.set_max_velocity(self.vmax)
         return
 
