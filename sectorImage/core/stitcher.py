@@ -93,16 +93,10 @@ class Stitcher:
         fn: string
             filename of the single image
         """
-        try:
-            # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
-            im = singleImage.SingleImage(fn)
-            # im.getFeatures(npz=npzfn)
-            im.getFeatures()
-            # im.setFeatures(npz=npzfn)
-            im.getLines()
-            return im
-        except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-            os._exit(0)
+        # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
+        im = singleImage.SingleImage(fn)
+        # im.getFeatures(npz=npzfn)
+        im.getFeatures()
+        # im.setFeatures(npz=npzfn)
+        im.getLines()
+        return im

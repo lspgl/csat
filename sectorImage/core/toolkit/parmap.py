@@ -1,8 +1,11 @@
 import multiprocessing as mp
 
 try:
+    # Try to set the start method
     mp.set_start_method('spawn')
 except RuntimeError as e:
+    # Pass if it has already been set
+    # A RuntimeError is hopefully only raised for this reason...
     pass
 
 
