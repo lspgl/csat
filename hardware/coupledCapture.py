@@ -13,7 +13,6 @@ import time
 
 def CoupledCapture(n, directory, stp, cam):
     kwargs = {'n': n, 'directory': __location__ + '/' + directory}
-    print(__location__ + directory)
     #sp = Process(target=stp.discreteRotation, kwargs=kwargs)
     cp = Process(target=cam.collectSeries, kwargs=kwargs)
     # sp.start()
