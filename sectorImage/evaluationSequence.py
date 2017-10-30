@@ -13,6 +13,6 @@ def EvaluationSequence(n, directory):
     fns = [directory + '/cpt' + str(i) + '.jpg' for i in range(1, n + 1)]
     s = Stitcher(fns, mpflag=True)
     s.loadImages()
-    s.stitchImages()
+    s.stitchImages(plot=True)
     print('Completed in', round(time.time() - t0, 2), 's')
     return s

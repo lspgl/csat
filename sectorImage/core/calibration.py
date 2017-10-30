@@ -110,14 +110,14 @@ class Calibrator:
         print('Residual:', residu)
         return (xc, yc, R, residu)
 
-    def computeAll(self, tofile=False):
+    def computeAll(self, tofile=True):
         self.comp = Parmap(self.computeMidpoint, self.fns)
 
         #self.comp = [self.computeMidpoint(fn) for fn in self.fns]
         self.calibration_raw = [c[:3] for c in self.comp]
         self.calibration = self.correction()
         if tofile:
-            np.save('data/calibration.npy', np.array(self.calibration))
+            np.save(__location__ + '/../data/calibration.npy', np.array(self.calibration))
         return self.calibration
 
     def loadCalibration(self, fn):

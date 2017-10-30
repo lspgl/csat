@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 import sys
 import os
 
+__location__ = os.path.realpath(
+    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
 
 class Stitcher:
 
@@ -63,14 +66,14 @@ class Stitcher:
             fig = plt.figure()
             ax = fig.add_subplot(111)
             # ref_point = 0
-            for i, image in enumerate(self.images):
+            for i, image in enumerate(self.images[::-1]):
                 for rs, phis in zip(image.r, image.phi):
                     #ref_point += len(phis) * image.coverage
                     #phis = np.array(phys) + ref_point
-                    phis = np.array(phis) + i * 190
+                    phis = np.array(phis) + i * 210
                     ax.plot(phis, rs, color='black', lw=0.5)
 
-            fig.savefig('img/out/stitched.png', dpi=300)
+            fig.savefig(__location__ + '/../img/out/stitched.png', dpi=300)
 
     def pickleSave(self, fn='stitcher.pkl'):
         """

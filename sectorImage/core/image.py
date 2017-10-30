@@ -8,6 +8,12 @@ import math
 import cv2
 # from skimage.filters import threshold_local
 
+import sys
+import os
+
+__location__ = os.path.realpath(
+    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
 
 class Image:
 
@@ -22,6 +28,11 @@ class Image:
         """
         t0 = time.time()
         self.fn = fn
+        self.id = int(self.fn.split('cpt')[-1].split('.')[0])
+        calibration_path = __location__ + '/../data/calibration.npy'
+        calibration = np.load(calibration_path)
+        self.midpoint = calibration[self.id - 1][:-1]
+        # self.midpoint = calibration[0][:-1]
         print('Reading image', fn)
         self.image = cv2.imread(self.fn, cv2.IMREAD_GRAYSCALE)
         self.image = np.rot90(self.image)
@@ -55,15 +66,17 @@ class Image:
         zi = ndimage.map_coordinates(img, np.vstack((y, x)), order=interpolationOrder, mode='nearest')
         return zi
 
-    def transformRadial(self, r, c, plot=False):
+    def transformRadial(self, r, plot=False):
         t0 = time.time()
-        dr = 454
+        # dr = 454
+        dr = self.midpoint[0] - self.dimx
+        print(dr)
         rmax = r + dr
 
         # TODO: Test if this is the right way around
-        cy = 2014
-        hplus = cy
-        hminus = 4000 - cy
+        # cy = 2014
+        hplus = self.dimy - self.midpoint[1]
+        hminus = self.midpoint[1]
         # hplus = 5.0
         # hminus = 6.0
         htot = hplus + hminus
@@ -77,6 +90,7 @@ class Image:
         thetaPlus_idx = int((thetaPlus + np.pi) / (2 * np.pi) * self.dimy)
         thetaMinus_idx = int((thetaMinus + np.pi) / (2 * np.pi) * self.dimy)
 
+        c = tuple(self.midpoint)
         out = cv2.linearPolar(self.image, c, rmax, cv2.WARP_FILL_OUTLIERS)
         angles = np.linspace(thetaPlus, thetaMinus, thetaMinus_idx - thetaPlus_idx, endpoint=True)
         self.dimensions = np.shape(out)
