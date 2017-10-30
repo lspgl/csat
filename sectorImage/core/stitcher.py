@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 
 
 class Stitcher:
-
     def __init__(self, fns, mpflag=True):
         """
         Stitching class to combine multiple processed images
@@ -38,7 +37,7 @@ class Stitcher:
             pool.join()
         else:
             for fn in self.fns:
-                npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
+                # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
                 im = singleImage.SingleImage(fn)
                 # im.getFeatures(npz=npzfn)
                 im.getFeatures()
@@ -58,7 +57,7 @@ class Stitcher:
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ref_point = 0
+            # ref_point = 0
             for i, image in enumerate(self.images):
                 for rs, phis in zip(image.r, image.phi):
                     #ref_point += len(phis) * image.coverage
@@ -90,7 +89,7 @@ def singleRoutine(fn):
     fn: string
         filename of the single image
     """
-    npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
+    # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
     im = singleImage.SingleImage(fn)
     # im.getFeatures(npz=npzfn)
     im.getFeatures()

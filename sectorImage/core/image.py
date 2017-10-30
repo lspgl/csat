@@ -272,7 +272,6 @@ class Image:
         # print('Blurring')
         # Gaussian Blur to remove fast features
         cv2.GaussianBlur(src=matrix, ksize=(0, 3), dst=proc, sigmaX=3, sigmaY=0)
-        plott = np.copy(proc)
 
         # print('Convolving')
         # Convolving with Prewitt kernel in x-direction
