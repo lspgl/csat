@@ -3,10 +3,14 @@ import numpy as np
 import multiprocessing as mp
 import pickle as pickle
 from .toolkit import pickler
+from .toolkit.parmap import Parmap
 import matplotlib.pyplot as plt
+import sys
+import os
 
 
 class Stitcher:
+
     def __init__(self, fns, mpflag=True):
         """
         Stitching class to combine multiple processed images
@@ -29,12 +33,13 @@ class Stitcher:
         """
 
         if self.mpflag:
-            mp.set_start_method('spawn')
-            ncpus = mp.cpu_count()
-            pool = mp.Pool(ncpus)
-            self.images = pool.map(singleRoutine, self.fns)
-            pool.close()
-            pool.join()
+            # mp.set_start_method('spawn')
+            #ncpus = mp.cpu_count()
+            #pool = mp.Pool(ncpus)
+            self.images = Parmap(self.singleRoutine, self.fns)
+
+            # pool.close()
+            # pool.join()
         else:
             for fn in self.fns:
                 # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
@@ -79,20 +84,25 @@ class Stitcher:
         p = pickler.Pickler()
         p.save(self, fn)
 
+    def singleRoutine(self, fn):
+        """
+        Image processing routine to be parallelized
 
-def singleRoutine(fn):
-    """
-    Image processing routine to be parallelized
-
-    Parameters
-    ----------
-    fn: string
-        filename of the single image
-    """
-    # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
-    im = singleImage.SingleImage(fn)
-    # im.getFeatures(npz=npzfn)
-    im.getFeatures()
-    # im.setFeatures(npz=npzfn)
-    im.getLines()
-    return im
+        Parameters
+        ----------
+        fn: string
+            filename of the single image
+        """
+        try:
+            # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
+            im = singleImage.SingleImage(fn)
+            # im.getFeatures(npz=npzfn)
+            im.getFeatures()
+            # im.setFeatures(npz=npzfn)
+            im.getLines()
+            return im
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+            os._exit(0)

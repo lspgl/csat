@@ -5,6 +5,7 @@ import math
 import matplotlib.pyplot as plt
 from scipy import optimize
 import multiprocessing as mp
+from .toolkit.parmap import Parmap
 
 import sys
 import os
@@ -28,7 +29,6 @@ class Calibrator:
         src = src.astype(np.uint8, copy=False)
         print('Blurring')
         im = np.empty(np.shape(src), np.uint8)
-        imx = np.empty(np.shape(src), np.uint8)
         # Gaussian Blur to remove fast features
         cv2.GaussianBlur(src=src, ksize=(0, 5), dst=im, sigmaX=1, sigmaY=1)
         # cv2.equalizeHist(src=im, dst=im)
@@ -111,7 +111,9 @@ class Calibrator:
         return (xc, yc, R, residu)
 
     def computeAll(self, tofile=False):
-        self.comp = [self.computeMidpoint(fn) for fn in self.fns]
+        self.comp = Parmap(self.computeMidpoint, self.fns)
+
+        #self.comp = [self.computeMidpoint(fn) for fn in self.fns]
         self.calibration_raw = [c[:3] for c in self.comp]
         self.calibration = self.correction()
         if tofile:

@@ -11,14 +11,13 @@ import time
 def CalibrationSequence(n, directory):
     t0 = time.time()
     fns = [directory + '/cpt' + str(i) + '.jpg' for i in range(1, n + 1)]
-    print(fns)
     c = Calibrator(fns)
     #c.computeMidpoint(fns[0], plot=True)
     c.computeAll()
     oscillation = c.oscillationCircle()
     c.plotCalibration()
     print('Calibration completed in', round(time.time() - t0, 2), 's')
-    # return oscillation
+    return oscillation
 
 
 if __name__ == '__main__':
