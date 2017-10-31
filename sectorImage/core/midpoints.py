@@ -36,17 +36,17 @@ class Walker:
             Coordinates of the parametrized band
         """
 
-        t0 = time.time()
+        # t0 = time.time()
 
         coords, launchpoints, endpoints, terminatinos = self.scan(
             self.skeleton, maxwidth=maxwidth)
-        print('Scan time Top:', str(round(time.time() - t0, 2)), 's')
+        # print('Scan time Top:', str(round(time.time() - t0, 2)), 's')
 
-        t0 = time.time()
+        # t0 = time.time()
         t_skeleton = np.flipud(self.skeleton)
         t_coords, t_launchpoints, t_endpoints, t_terminations = self.scan(
             t_skeleton, maxwidth=maxwidth)
-        print('Scan time Bottom:', str(round(time.time() - t0, 2)), 's')
+        # print('Scan time Bottom:', str(round(time.time() - t0, 2)), 's')
         ud_coords = [[[self.skeleton.shape[0] - 1 - tc[0], tc[1]] for tc in t_coord] for t_coord in t_coords]
         # ud_launchpoints = [[self.skeleton.shape[0] - 1 - lp[0], lp[1]] for lp in t_launchpoints]
         ud_endpoints = [[self.skeleton.shape[0] - 1 - ep[0], ep[1]] for ep in t_endpoints]
@@ -104,7 +104,7 @@ class Walker:
         skeleton: 2D array
             skeletonized image
         """
-        t0 = time.time()
+        # t0 = time.time()
         # Initialize arrays to do computation in place
         skeleton = np.zeros(img.shape, np.uint8)
         eroded = np.zeros(img.shape, np.uint8)
@@ -120,7 +120,7 @@ class Walker:
             img, eroded = eroded, img  # Swap instead of copy
 
             if cv2.countNonZero(img) == 0:
-                print('Skeletonization in', str(round(time.time() - t0, 2)), 's')
+                # print('Skeletonization in', str(round(time.time() - t0, 2)), 's')
                 return skeleton
 
     def scan(self, skeleton, maxwidth=10, nbands=np.inf):
@@ -223,7 +223,8 @@ class Walker:
                 head[1] += 1
             bands_scanned += 1
         if len(terminations) - outruns > 0:
-            print('Detected', len(terminations) - outruns, 'terminations')
+            # print('Detected', len(terminations) - outruns, 'terminations')
+            pass
         return coords, launchpoints, endpoints, terminations
 
     def rotatePath(self, path, lx, ly):

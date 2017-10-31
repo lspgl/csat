@@ -8,6 +8,10 @@ import time
 # Edge coordinates are calculated for each band
 # Calculation only sweeps along the edges without sampling
 # the entire image
+"""
+DEPRECATED
+Use Midpoints.py instead
+"""
 
 
 class Walker:

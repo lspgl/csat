@@ -161,5 +161,6 @@ class Sequence:
 
     @_requiresCalibrated
     def evaluateOffsite(self, n=16, directory='hardware/capture'):
+        print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
         stitcher = EvaluationSequence(n=n, directory=directory)
         return stitcher

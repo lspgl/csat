@@ -2,7 +2,10 @@ import numpy as np
 from scipy import ndimage
 import scipy
 import matplotlib.pyplot as plt
-
+"""
+DEPRECATED
+Use Midpoints.py instead
+"""
 
 def LineParser(edges, smoothing=None, plot=False):
     structure = np.ones((3, 3))

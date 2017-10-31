@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import matplotlib
 import math
 import cv2
-# from skimage.filters import threshold_local
 
 import sys
 import os
@@ -17,7 +16,7 @@ __location__ = os.path.realpath(
 
 class Image:
 
-    def __init__(self, fn):
+    def __init__(self, fn, calibration):
         """
         Image processing class
 
@@ -26,17 +25,17 @@ class Image:
         fn: string
             filename of the image to be processed
         """
-        t0 = time.time()
+        # t0 = time.time()
         self.fn = fn
         self.id = int(self.fn.split('cpt')[-1].split('.')[0])
-        calibration_path = __location__ + '/../data/calibration.npy'
-        calibration = np.load(calibration_path)
+        #calibration_path = __location__ + '/../data/calibration.npy'
+        #calibration = np.load(calibration_path)
         self.midpoint = calibration[self.id - 1][:-1]
         # self.midpoint = calibration[0][:-1]
         print('Reading image', fn)
         self.image = cv2.imread(self.fn, cv2.IMREAD_GRAYSCALE)
         self.image = np.rot90(self.image)
-        print('Image loaded in', str(round(time.time() - t0, 2)), 's')
+        # print('Image loaded in', str(round(time.time() - t0, 2)), 's')
         self.dimensions = np.shape(self.image)
         self.dimy, self.dimx = self.dimensions
 
@@ -66,17 +65,38 @@ class Image:
         zi = ndimage.map_coordinates(img, np.vstack((y, x)), order=interpolationOrder, mode='nearest')
         return zi
 
-    def transformRadial(self, r, plot=False):
-        t0 = time.time()
+    def transformRadial(self, r, midpoint=None, plot=False):
+        """
+        Creates a transformed image where a sector is mapped to r/phi coordinates
+
+        Parameters
+        ----------
+        r: float
+            Radius relative to the recorded image within the sector is recorded
+        midpoint: 2-tuple of floats, optional
+            Origin of the polar coordinate system. If None is given, the calibration data from the current class instantation is taken
+        plot: bool, optional
+            Plot the transformed image. Default is False
+            Cannot be used if multiprocessing is active
+
+        Returns
+        -------
+        out: 2D array
+            Coordinate transformed image
+        angles: 1D array of floats
+            angles between which the image is fully covered
+        """
+        if midpoint is None:
+            midpoint = self.midpoint
+        # t0 = time.time()
         # dr = 454
-        dr = self.midpoint[0] - self.dimx
-        print(dr)
+        dr = midpoint[0] - self.dimx
         rmax = r + dr
 
         # TODO: Test if this is the right way around
         # cy = 2014
-        hplus = self.dimy - self.midpoint[1]
-        hminus = self.midpoint[1]
+        hplus = self.dimy - midpoint[1]
+        hminus = midpoint[1]
         # hplus = 5.0
         # hminus = 6.0
         htot = hplus + hminus
@@ -90,11 +110,13 @@ class Image:
         thetaPlus_idx = int((thetaPlus + np.pi) / (2 * np.pi) * self.dimy)
         thetaMinus_idx = int((thetaMinus + np.pi) / (2 * np.pi) * self.dimy)
 
-        c = tuple(self.midpoint)
+        c = tuple(midpoint)
         out = cv2.linearPolar(self.image, c, rmax, cv2.WARP_FILL_OUTLIERS)
         angles = np.linspace(thetaPlus, thetaMinus, thetaMinus_idx - thetaPlus_idx, endpoint=True)
+
         self.dimensions = np.shape(out)
         self.dimy, self.dimx = self.dimensions
+        absoluteZero = (self.dimy / 2 - thetaPlus_idx) - 1
         out = out[thetaPlus_idx:thetaMinus_idx]
         for i, line in enumerate(out[:]):
             for pt in line:
@@ -106,13 +128,16 @@ class Image:
             fig = plt.figure()
             ax = fig.add_subplot(111)
             ax.imshow(out)
+            ax.axhline(y=absoluteZero)
             ax.set_aspect('auto')
             fig.savefig('img/out/cv2transform.png', dpi=300)
-        print('Coordinate transformation completed in ', str(round(time.time() - t0, 2)), 's')
-        return out, angles
+        # print('Coordinate transformation completed in ', str(round(time.time() - t0, 2)), 's')
+        return out, angles, absoluteZero
 
     def lineSweep(self, r, dr=0, resolution=None, interpolationOrder=1, plot=False):
         """
+        Deprecated: Use transformRadial instead.
+
         Creates a transformed image where a sector is mapped to r/phi coordinates
         The matrix is interpolated along the angled measurement lines
 
@@ -254,12 +279,6 @@ class Image:
 
         return np.array(linesnew), angles
 
-    # ******************************************************************************************
-    # ******************************************************************************************
-
-    # ******************************************************************************************
-    # ******************************************************************************************
-
     def detectFeatures(self, matrix, plot=False):
         """
         Distinguish band from background in binary matrix
@@ -278,7 +297,7 @@ class Image:
             Processed binary image
 
         """
-        t0 = time.time()
+        # t0 = time.time()
 
         # Initializing Empty array in Memory
         proc = np.empty(np.shape(matrix))
@@ -297,8 +316,8 @@ class Image:
 
         # Threshold to 30% for noise reduction
         proc *= proc * (1.0 / proc.max())
-
         thresh = 0.7
+        thresh = 0.15
         cv2.threshold(src=proc, dst=proc, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
 
         # print('Morphology')
@@ -343,5 +362,5 @@ class Image:
             ax.set_ylabel('Angle [idx]')
             fig.savefig('img/out/filter.png', dpi=600, interpolation='none')
 
-        print('Features detected in', str(round(time.time() - t0, 2)), 's')
+        # print('Features detected in', str(round(time.time() - t0, 2)), 's')
         return proc  # , loss

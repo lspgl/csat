@@ -1,7 +1,5 @@
 from . import singleImage
 import numpy as np
-import multiprocessing as mp
-import pickle as pickle
 from .toolkit import pickler
 from .toolkit.parmap import Parmap
 import matplotlib.pyplot as plt
@@ -30,6 +28,11 @@ class Stitcher:
         self.images = []
         self.mpflag = mpflag
 
+        #self.id = int(self.fn.split('cpt')[-1].split('.')[0])
+        calibration_path = __location__ + '/../data/calibration.npy'
+        self.calibration = np.load(calibration_path)
+        #self.midpoint = calibration[self.id - 1][:-1]
+
     def loadImages(self):
         """
         Initialize the SingleImage instances and process the images.
@@ -39,14 +42,13 @@ class Stitcher:
             # mp.set_start_method('spawn')
             #ncpus = mp.cpu_count()
             #pool = mp.Pool(ncpus)
-            self.images = Parmap(self.singleRoutine, self.fns)
-
+            self.images = Parmap(self.singleRoutine, self.fns, self.calibration)
             # pool.close()
             # pool.join()
         else:
             for fn in self.fns:
                 # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
-                im = singleImage.SingleImage(fn)
+                im = singleImage.SingleImage(fn, self.calibration)
                 # im.getFeatures(npz=npzfn)
                 im.getFeatures()
                 # im.setFeatures(npz=npzfn)
@@ -54,6 +56,7 @@ class Stitcher:
                 self.images.append(im)
 
     def stitchImages(self, plot=False):
+        print('Stitching images')
         """
         Stitch the parametrized band midpoints and plot the output
 
@@ -62,18 +65,16 @@ class Stitcher:
         plot: bool, optional
             plot the output. Default True
         """
-        if plot:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            # ref_point = 0
-            for i, image in enumerate(self.images[::-1]):
-                for rs, phis in zip(image.r, image.phi):
-                    #ref_point += len(phis) * image.coverage
-                    #phis = np.array(phys) + ref_point
-                    phis = np.array(phis) + i * 210
-                    ax.plot(phis, rs, color='black', lw=0.5)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
 
-            fig.savefig(__location__ + '/../img/out/stitched.png', dpi=300)
+        for i, image in enumerate(self.images[::-1]):
+            stepsize = (image.angles[-1] - image.angles[0]) / len(image.angles)
+            for rs, phis in zip(image.r, image.phi):
+                phis = (np.array(phis) * stepsize) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
+                ax.plot(phis, rs, color='black', lw=0.5)
+
+        fig.savefig(__location__ + '/../img/out/stitched.png', dpi=300)
 
     def pickleSave(self, fn='stitcher.pkl'):
         """
@@ -87,7 +88,7 @@ class Stitcher:
         p = pickler.Pickler()
         p.save(self, fn)
 
-    def singleRoutine(self, fn):
+    def singleRoutine(self, fn, calibration):
         """
         Image processing routine to be parallelized
 
@@ -97,7 +98,7 @@ class Stitcher:
             filename of the single image
         """
         # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
-        im = singleImage.SingleImage(fn)
+        im = singleImage.SingleImage(fn, calibration)
         # im.getFeatures(npz=npzfn)
         im.getFeatures()
         # im.setFeatures(npz=npzfn)

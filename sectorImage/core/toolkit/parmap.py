@@ -2,26 +2,29 @@ import multiprocessing as mp
 
 try:
     # Try to set the start method
+    # This is not necessary needed, depending on what you try to parallelize the default 'fork' works fine
+    # e.g. OpenCV under OSX needs this
     mp.set_start_method('spawn')
 except RuntimeError as e:
     # Pass if it has already been set
-    # A RuntimeError is hopefully only raised for this reason...
+    # A RuntimeError is hopefully only raised for this reason;
+    # Otherwise this should be handled a bit more carefully
     pass
 
 
-def fun(f, q_in, q_out):
+def fun(f, q_in, q_out, args, kwargs):
     while True:
         i, x = q_in.get()
         if i is None:
             break
-        q_out.put((i, f(x)))
+        q_out.put((i, f(x, *args, **kwargs)))
 
 
-def Parmap(f, X, nprocs=mp.cpu_count()):
+def Parmap(f, X, *args, nprocs=mp.cpu_count(), **kwargs):
     q_in = mp.Queue(1)
     q_out = mp.Queue()
 
-    proc = [mp.Process(target=fun, args=(f, q_in, q_out))
+    proc = [mp.Process(target=fun, args=(f, q_in, q_out, args, kwargs))
             for _ in range(nprocs)]
     for p in proc:
         p.daemon = True

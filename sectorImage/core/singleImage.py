@@ -7,7 +7,7 @@ import numpy as np
 
 class SingleImage:
 
-    def __init__(self, fn):
+    def __init__(self, fn, calibration):
         """
         Class for handling a single image
 
@@ -18,8 +18,9 @@ class SingleImage:
             filename of source image
         """
         self.fn = fn
+        self.calibration = calibration
 
-    def getFeatures(self, radius=6000, interpolationOrder=1, resolution=None, npz=None):
+    def getFeatures(self, radius=6000, resolution=None, npz=None):
         """
         Process the features of the image
 
@@ -27,17 +28,15 @@ class SingleImage:
         ----------
         radius: float or int, optional
             maximal radius which is analyzed. Depending on the midpoint this determines the maximally covered angle of the detectable region. Default is 5000
-        interpolationOrder: int, optional
-            order of the interpolation polynom for the coordinate transform. Default is 1
         resolution: int, optional
             number of pixel in an interpolation line. If None is given, the radius is taken as the size of a measurement line. Default is None
         npz: bool, optional
             If True the results of the feature detection is stored in an .npz file. Default is None
 
         """
-        self.img = image.Image(self.fn)
+        self.img = image.Image(self.fn, self.calibration)
 
-        angularLines, self.angles = self.img.transformRadial(r=radius, plot=False)
+        angularLines, self.angles, self.absoluteZero = self.img.transformRadial(r=radius, plot=False)
 
         # self.coverage = self.img.thetaCovered
         # self.features, self.loss = self.img.detectFeatures(angularLines, plot=True)
@@ -73,9 +72,6 @@ class SingleImage:
         """
         self.walker = midpoints.Walker(self.features)
         self.r, self.phi = self.walker.walkSkeleton(plot=False, maxwidth=10,)
-        #self.walker = linewalker.Walker()
-        # self.walker.scanMultiple(self.features)
-        #self.rbands, self.phis = self.walker.fastFeatures(plot=True)
         return self.r, self.phi
 
     def __repr__(self):

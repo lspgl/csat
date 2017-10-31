@@ -8,7 +8,7 @@ from sequence import Sequence
 
 
 def main():
-    s = Sequence(offsite=False)
+    s = Sequence(offsite=True)
     s.prime()
     s.calibrate()
     # s.calibrated = True
