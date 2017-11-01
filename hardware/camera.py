@@ -58,9 +58,9 @@ class Camera:
 
         ctr = 0
         while True:
-            print('waiting for line...')
+            # print('waiting for line...')
             line = c.stderr.readline()
-            print('recieved line')
+            # print('recieved line')
             if line != '':
                 ctr += 1
                 print('Captured image', ctr)

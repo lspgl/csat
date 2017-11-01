@@ -25,7 +25,6 @@ def CoupledCapture(n, directory, stp, cam):
     t = n * (1 / fps) + timeshift
     stp.continuousRotation(t=t, nTurn=2)
     cp.join()
-    print('done')
 
 
 if __name__ == '__main__':
