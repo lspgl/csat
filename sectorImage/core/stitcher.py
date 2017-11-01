@@ -2,6 +2,7 @@ from . import singleImage
 import numpy as np
 from .toolkit import pickler
 from .toolkit.parmap import Parmap
+from .toolkit.colors import Colors as _C
 import matplotlib.pyplot as plt
 import sys
 import os
@@ -12,7 +13,7 @@ __location__ = os.path.realpath(
 
 class Stitcher:
 
-    def __init__(self, fns, mpflag=True):
+    def __init__(self, fns, calibration=None, mpflag=True):
         """
         Stitching class to combine multiple processed images
 
@@ -28,10 +29,12 @@ class Stitcher:
         self.images = []
         self.mpflag = mpflag
 
-        #self.id = int(self.fn.split('cpt')[-1].split('.')[0])
-        calibration_path = __location__ + '/../data/calibration.npy'
-        self.calibration = np.load(calibration_path)
-        #self.midpoint = calibration[self.id - 1][:-1]
+        if calibration is None:
+            print('Loading Calibration from File')
+            calibration_path = __location__ + '/../data/calibration.npy'
+            self.calibration = np.load(calibration_path)
+        else:
+            self.calibration = calibration
 
     def loadImages(self):
         """
@@ -56,7 +59,7 @@ class Stitcher:
                 self.images.append(im)
 
     def stitchImages(self, plot=False):
-        print('Stitching images')
+        print(_C.MAGENTA + 'Stitching images' + _C.ENDC)
         """
         Stitch the parametrized band midpoints and plot the output
 

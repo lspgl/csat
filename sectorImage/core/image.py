@@ -2,6 +2,7 @@ import numpy as np
 import time
 from scipy import ndimage
 from .toolkit import vectools
+from .toolkit.colors import Colors as _C
 import matplotlib.pyplot as plt
 import matplotlib
 import math
@@ -32,12 +33,78 @@ class Image:
         # calibration = np.load(calibration_path)
         self.midpoint = calibration[self.id - 1][:-1]
         # self.midpoint = calibration[0][:-1]
-        print('Reading image', fn)
+        print(_C.YEL + 'Processing image ' + _C.BOLD + fn + _C.ENDC)
         self.image = cv2.imread(self.fn, cv2.IMREAD_GRAYSCALE)
         self.image = np.rot90(self.image)
         # print('Image loaded in', str(round(time.time() - t0, 2)), 's')
         self.dimensions = np.shape(self.image)
         self.dimy, self.dimx = self.dimensions
+
+    def transformRadial(self, r, midpoint=None, plot=False):
+        """
+        Creates a transformed image where a sector is mapped to r/phi coordinates
+
+        Parameters
+        ----------
+        r: float
+            Radius relative to the recorded image within the sector is recorded
+        midpoint: 2-tuple of floats, optional
+            Origin of the polar coordinate system. If None is given, the calibration data from the current class instantation is taken
+        plot: bool, optional
+            Plot the transformed image. Default is False
+            Cannot be used if multiprocessing is active
+
+        Returns
+        -------
+        transformed: 2D array
+            Coordinate transformed image
+        angles: 1D array of floats
+            angles between which the image is fully covered
+        radii: 1D array of float
+            distance scaling of rmax in the transformed image
+        """
+        if midpoint is None:
+            midpoint = self.midpoint
+        # t0 = time.time()
+        dr = midpoint[0] - self.dimx
+        rmax = r + dr
+
+        hplus = midpoint[1]
+        hminus = self.dimy - midpoint[1]
+
+        thetaPlus = -math.asin(hplus / rmax)
+        thetaMinus = math.asin(hminus / rmax)
+
+        thetaPlus_idx = int((thetaPlus + np.pi) / (2 * np.pi) * self.dimy)
+        thetaMinus_idx = int((thetaMinus + np.pi) / (2 * np.pi) * self.dimy)
+
+        c = tuple(midpoint)
+        transformed = cv2.linearPolar(self.image, c, rmax, cv2.WARP_FILL_OUTLIERS)
+        angles = np.linspace(thetaPlus, thetaMinus, thetaMinus_idx - thetaPlus_idx, endpoint=True)
+        radii = np.linspace(0, rmax, self.dimx)
+
+        self.dimensions = np.shape(transformed)
+        self.dimy, self.dimx = self.dimensions
+        absoluteZero = (self.dimy / 2 - thetaPlus_idx) - 1
+        transformed = transformed[thetaPlus_idx:thetaMinus_idx]
+
+        # Pad the transformed image with the boundary value
+        for i, line in enumerate(transformed[:]):
+            for pt in line:
+                if pt != 0:
+                    val = pt
+                    break
+            transformed[i][transformed[i] == 0] = val
+
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.imshow(transformed)
+            ax.axhline(y=absoluteZero)
+            ax.set_aspect('auto')
+            fig.savefig('img/out/cv2transform.png', dpi=300)
+        # print('Coordinate transformation completed in ', str(round(time.time() - t0, 2)), 's')
+        return transformed, angles, radii
 
     def profileLine(self, p0, p1, img=None, interpolationOrder=1):
         """
@@ -64,73 +131,6 @@ class Image:
 
         zi = ndimage.map_coordinates(img, np.vstack((y, x)), order=interpolationOrder, mode='nearest')
         return zi
-
-    def transformRadial(self, r, midpoint=None, plot=False):
-        """
-        Creates a transformed image where a sector is mapped to r/phi coordinates
-
-        Parameters
-        ----------
-        r: float
-            Radius relative to the recorded image within the sector is recorded
-        midpoint: 2-tuple of floats, optional
-            Origin of the polar coordinate system. If None is given, the calibration data from the current class instantation is taken
-        plot: bool, optional
-            Plot the transformed image. Default is False
-            Cannot be used if multiprocessing is active
-
-        Returns
-        -------
-        out: 2D array
-            Coordinate transformed image
-        angles: 1D array of floats
-            angles between which the image is fully covered
-        """
-        if midpoint is None:
-            midpoint = self.midpoint
-        # t0 = time.time()
-        dr = midpoint[0] - self.dimx
-        rmax = r + dr
-
-        hplus = midpoint[1]
-        hminus = self.dimy - midpoint[1]
-        # htot = hplus + hminus
-
-        # lplus = hplus / htot * self.dimy
-        # lminus = hminus / htot * self.dimy
-
-        # thetaPlus = -math.asin(lplus / rmax)
-        # thetaMinus = math.asin(lminus / rmax)
-        thetaPlus = -math.asin(hplus / rmax)
-        thetaMinus = math.asin(hminus / rmax)
-
-        thetaPlus_idx = int((thetaPlus + np.pi) / (2 * np.pi) * self.dimy)
-        thetaMinus_idx = int((thetaMinus + np.pi) / (2 * np.pi) * self.dimy)
-
-        c = tuple(midpoint)
-        out = cv2.linearPolar(self.image, c, rmax, cv2.WARP_FILL_OUTLIERS)
-        angles = np.linspace(thetaPlus, thetaMinus, thetaMinus_idx - thetaPlus_idx, endpoint=True)
-        radii = np.linspace(0, rmax, self.dimx)
-
-        self.dimensions = np.shape(out)
-        self.dimy, self.dimx = self.dimensions
-        absoluteZero = (self.dimy / 2 - thetaPlus_idx) - 1
-        out = out[thetaPlus_idx:thetaMinus_idx]
-        for i, line in enumerate(out[:]):
-            for pt in line:
-                if pt != 0:
-                    val = pt
-                    break
-            out[i][out[i] == 0] = val
-        if plot:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            ax.imshow(out)
-            ax.axhline(y=absoluteZero)
-            ax.set_aspect('auto')
-            fig.savefig('img/out/cv2transform.png', dpi=300)
-        # print('Coordinate transformation completed in ', str(round(time.time() - t0, 2)), 's')
-        return out, angles, radii
 
     def lineSweep(self, r, dr=0, resolution=None, interpolationOrder=1, plot=False):
         """
@@ -309,7 +309,6 @@ class Image:
         prewitt_kernel = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
         cv2.filter2D(src=proc, kernel=prewitt_kernel, dst=proc, ddepth=-1)
         np.abs(proc, out=proc)
-        # plott = np.copy(proc)
         # print('Thresholding')
 
         # Threshold to 30% for noise reduction
@@ -332,7 +331,6 @@ class Image:
         n_labels, labels, l_stats, l_centroids = cv2.connectedComponentsWithStats(image=proc_inv, connectivity=4)
         # The maximum number of pixels in a noise field
         # Everything larger is considered to be background
-        # fieldsize = 1e5
         fieldsize = 1e4
         # Label background fields
         gaps = []

@@ -142,7 +142,7 @@ class Sequence:
         self.calibrated = True
         return oscillation
 
-    def calibrateOffsite(self, n=16, directory='hardware/calib'):
+    def calibrateOffsite(self, n=16, directory='hardware/combined'):
         print(_C.CYAN + _C.BOLD + 'Calibrating system from stored images' + _C.ENDC)
         oscillation = CalibrationSequence(n=n, directory=directory)
         self.calibrated = True
@@ -160,7 +160,7 @@ class Sequence:
         return stitcher
 
     @_requiresCalibrated
-    def evaluateOffsite(self, n=16, directory='hardware/capture'):
+    def evaluateOffsite(self, n=16, directory='hardware/combined'):
         print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
         stitcher = EvaluationSequence(n=n, directory=directory)
         return stitcher
