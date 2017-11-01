@@ -116,6 +116,7 @@ class Calibrator:
         #self.comp = [self.computeMidpoint(fn) for fn in self.fns]
         self.calibration_raw = [c[:3] for c in self.comp]
         self.calibration = self.correction()
+        # self.calibration = self.calibration_raw
         if tofile:
             np.save(__location__ + '/../data/calibration.npy', np.array(self.calibration))
         return self.calibration
