@@ -17,8 +17,8 @@ def CoupledCapture(n, directory, stp, cam):
     cp = Process(target=cam.collectSeries, kwargs=kwargs)
     # sp.start()
     cp.start()
-    delay = 0.5
-    time.sleep(delay)
+    # delay = 0.5
+    # time.sleep(delay)
     # stp.discreteRotation(**kwargs)
     timeshift = -0.05
     fps = 6
