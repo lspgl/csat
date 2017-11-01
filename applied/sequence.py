@@ -1,6 +1,7 @@
 import sys
 import os
 from functools import wraps
+import time
 
 __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -169,12 +170,14 @@ class Sequence:
 
     @_requiresPrimed
     def measure(self, n=16):
+        t0 = time.time()
         input(_C.YEL +
               'Insert electrode with calibration ring and close door [Press any key when ready]' +
               _C.ENDC)
         CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
         print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
         stitcher = CombinedSequence(n=n, directory='hardware/combined')
+        print(_C.CYAN + _C.BOLD + 'Measurement completed in ' + str(round(time.time() - t0, 2)) + 's' + _C.ENDC)
         return stitcher
 
     def measureOffsite(self, n=16, directory='hardware/combined'):
