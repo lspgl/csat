@@ -14,6 +14,7 @@ from hardware.coupledCapture import CoupledCapture
 
 from sectorImage.calibrationSequence import CalibrationSequence
 from sectorImage.evaluationSequence import EvaluationSequence
+from sectorImage.combinedSequence import CombinedSequence
 
 
 class Sequence:
@@ -35,6 +36,7 @@ class Sequence:
             self.disable = self._placeholder
             self.calibrate = self.calibrateOffsite
             self.evaluate = self.evaluateOffsite
+            self.measure = self.measureOffsite
 
         else:
             self.cam = Camera()
@@ -163,4 +165,19 @@ class Sequence:
     def evaluateOffsite(self, n=16, directory='hardware/combined'):
         print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
         stitcher = EvaluationSequence(n=n, directory=directory)
+        return stitcher
+
+    @_requiresPrimed
+    def measure(self, n=16):
+        input(_C.YEL +
+              'Insert electrode with calibration ring and close door [Press any key when ready]' +
+              _C.ENDC)
+        CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
+        print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
+        stitcher = CombinedSequence(n=n, directory='hardware/combined')
+        return stitcher
+
+    def measureOffsite(self, n=16, directory='hardware/combined'):
+        print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
+        stitcher = CombinedSequence(n=n, directory=directory)
         return stitcher

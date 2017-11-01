@@ -10,9 +10,10 @@ from sequence import Sequence
 def main():
     s = Sequence(offsite=True)
     s.prime()
-    s.calibrate()
+    # s.calibrate()
     # s.calibrated = True
-    s.evaluate()
+    # s.evaluate()
+    s.measure()
     s.disable()
 
 

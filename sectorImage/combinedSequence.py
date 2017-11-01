@@ -10,7 +10,7 @@ from core.toolkit.colors import Colors as _C
 import time
 
 
-def combinedSequence(n, directory):
+def CombinedSequence(n, directory):
     t0 = time.time()
     fns = [directory + '/cpt' + str(i) + '.jpg' for i in range(1, n + 1)]
     c = Calibrator(fns)
@@ -29,4 +29,4 @@ def combinedSequence(n, directory):
 
 
 if __name__ == '__main__':
-    combinedSequence(n=16, directory='hardware/combined')
+    CombinedSequence(n=16, directory='hardware/combined')
