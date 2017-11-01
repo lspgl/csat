@@ -36,7 +36,7 @@ class SingleImage:
         """
         self.img = image.Image(self.fn, self.calibration)
 
-        angularLines, self.angles, self.absoluteZero = self.img.transformRadial(r=radius, plot=False)
+        angularLines, self.angles, self.radii = self.img.transformRadial(r=radius, plot=False)
 
         # self.coverage = self.img.thetaCovered
         # self.features, self.loss = self.img.detectFeatures(angularLines, plot=True)

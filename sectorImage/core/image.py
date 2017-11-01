@@ -28,8 +28,8 @@ class Image:
         # t0 = time.time()
         self.fn = fn
         self.id = int(self.fn.split('cpt')[-1].split('.')[0])
-        #calibration_path = __location__ + '/../data/calibration.npy'
-        #calibration = np.load(calibration_path)
+        # calibration_path = __location__ + '/../data/calibration.npy'
+        # calibration = np.load(calibration_path)
         self.midpoint = calibration[self.id - 1][:-1]
         # self.midpoint = calibration[0][:-1]
         print('Reading image', fn)
@@ -89,23 +89,20 @@ class Image:
         if midpoint is None:
             midpoint = self.midpoint
         # t0 = time.time()
-        # dr = 454
         dr = midpoint[0] - self.dimx
         rmax = r + dr
 
-        # TODO: Test if this is the right way around
-        # cy = 2014
-        hplus = self.dimy - midpoint[1]
-        hminus = midpoint[1]
-        # hplus = 5.0
-        # hminus = 6.0
-        htot = hplus + hminus
+        hplus = midpoint[1]
+        hminus = self.dimy - midpoint[1]
+        # htot = hplus + hminus
 
-        lplus = hplus / htot * self.dimy
-        lminus = hminus / htot * self.dimy
+        # lplus = hplus / htot * self.dimy
+        # lminus = hminus / htot * self.dimy
 
-        thetaPlus = -math.asin(lplus / rmax)
-        thetaMinus = math.asin(lminus / rmax)
+        # thetaPlus = -math.asin(lplus / rmax)
+        # thetaMinus = math.asin(lminus / rmax)
+        thetaPlus = -math.asin(hplus / rmax)
+        thetaMinus = math.asin(hminus / rmax)
 
         thetaPlus_idx = int((thetaPlus + np.pi) / (2 * np.pi) * self.dimy)
         thetaMinus_idx = int((thetaMinus + np.pi) / (2 * np.pi) * self.dimy)
@@ -113,6 +110,7 @@ class Image:
         c = tuple(midpoint)
         out = cv2.linearPolar(self.image, c, rmax, cv2.WARP_FILL_OUTLIERS)
         angles = np.linspace(thetaPlus, thetaMinus, thetaMinus_idx - thetaPlus_idx, endpoint=True)
+        radii = np.linspace(0, rmax, self.dimx)
 
         self.dimensions = np.shape(out)
         self.dimy, self.dimx = self.dimensions
@@ -132,7 +130,7 @@ class Image:
             ax.set_aspect('auto')
             fig.savefig('img/out/cv2transform.png', dpi=300)
         # print('Coordinate transformation completed in ', str(round(time.time() - t0, 2)), 's')
-        return out, angles, absoluteZero
+        return out, angles, radii
 
     def lineSweep(self, r, dr=0, resolution=None, interpolationOrder=1, plot=False):
         """

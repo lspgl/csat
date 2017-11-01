@@ -69,11 +69,15 @@ class Stitcher:
         ax = fig.add_subplot(111)
 
         for i, image in enumerate(self.images[::-1]):
-            stepsize = (image.angles[-1] - image.angles[0]) / len(image.angles)
+            stepsize_angles = (image.angles[-1] - image.angles[0]) / len(image.angles)
+            stepsize_radii = (image.radii[-1] - image.radii[0]) / len(image.radii)
             for rs, phis in zip(image.r, image.phi):
-                phis = (np.array(phis) * stepsize) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
+                phis = (np.array(phis) * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
+                rs = (np.array(rs) * stepsize_radii)
                 ax.plot(phis, rs, color='black', lw=0.5)
 
+        ax.set_xlabel('Angle [rad]')
+        ax.set_ylabel('Radius [px]')
         fig.savefig(__location__ + '/../img/out/stitched.png', dpi=300)
 
     def pickleSave(self, fn='stitcher.pkl'):
