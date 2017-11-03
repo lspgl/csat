@@ -22,7 +22,8 @@ def CombinedSequence(n, directory):
     t1 = time.time()
     s = Stitcher(fns, calibration=calibration, mpflag=True)
     s.loadImages()
-    s.stitchImages(plot=True)
+    segments = s.stitchImages(plot=False)
+    s.combineSegments(segments)
     print(_C.BOLD + _C.CYAN + 'Detection completed in ' + str(round(time.time() - t1, 2)) + 's' + _C.ENDC)
     print(_C.BOLD + _C.CYAN + 'Computation Completed in ' + str(round(time.time() - t0, 2)) + 's' + _C.ENDC)
     return s

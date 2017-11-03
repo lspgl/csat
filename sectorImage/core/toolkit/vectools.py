@@ -27,6 +27,12 @@ def pointdist(p1, p2):
     return dist
 
 
+def pointdistPolar(p1, p2):
+    # Convention used is (phi, r)
+    dist = math.sqrt(p1[1]**2 + p2[1]**2 - 2 * p1[1] * p2[1] * math.cos(p2[0] - p1[0]))
+    return dist
+
+
 def vectormags(v_arr):
     # Magnitudes of vectors in an array
 
