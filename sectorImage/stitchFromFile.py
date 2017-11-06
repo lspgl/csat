@@ -15,9 +15,9 @@ def StitchFromFile(n=16, directory='hardware/combined'):
     fns = [directory + '/cpt' + str(i) + '.jpg' for i in range(1, n + 1)]
     s = Stitcher(fns, calibration=None, mpflag=True)
     segments = s.loadSegments()
-    s.combineSegments(segments)
+    spiral = s.combineSegments(segments, plot=True)
     print(_C.BOLD + _C.CYAN + 'Computation Completed in ' + str(round(time.time() - t0, 2)) + 's' + _C.ENDC)
-    return s
+    return spiral
 
 if __name__ == '__main__':
     StitchFromFile()

@@ -17,6 +17,10 @@ from sectorImage.calibrationSequence import CalibrationSequence
 from sectorImage.evaluationSequence import EvaluationSequence
 from sectorImage.combinedSequence import CombinedSequence
 
+import h5py
+import numpy as np
+import datetime
+
 
 class Sequence:
 
@@ -50,7 +54,6 @@ class Sequence:
             self.stp = Stepper(autoEnable=False)
             print(_C.LIME + 'Ready for priming' + _C.ENDC)
         self.primed = False
-        self.calibrated = False
 
     def _requiresPrimed(func):
         """
@@ -73,32 +76,6 @@ class Sequence:
                 return func(self, *args, **kwargs)
             else:
                 print(_C.RED + _C.BOLD + 'System not primed' + _C.ENDC)
-                print(_C.RED + 'Required for: ' + func.__name__ + _C.ENDC)
-                return None
-
-        return wrapper
-
-    def _requiresCalibrated(func):
-        """
-        Wrapper to ensure that the system is calibrated
-
-        Parameters
-        ----------
-        func: function
-            function to be wrapped
-
-        Returns
-        -------
-        function or None
-            wrapped func is returned if the system is primed, otherwise None
-        """
-
-        @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            if self.calibrated:
-                return func(self, *args, **kwargs)
-            else:
-                print(_C.RED + _C.BOLD + 'System not calibrated' + _C.ENDC)
                 print(_C.RED + 'Required for: ' + func.__name__ + _C.ENDC)
                 return None
 
@@ -152,7 +129,6 @@ class Sequence:
         return oscillation
 
     @_requiresPrimed
-    @_requiresCalibrated
     def evaluate(self, n=16):
         print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
         input(_C.YEL +
@@ -162,7 +138,6 @@ class Sequence:
         stitcher = EvaluationSequence(n=n, directory='hardware/capture')
         return stitcher
 
-    @_requiresCalibrated
     def evaluateOffsite(self, n=16, directory='hardware/combined'):
         print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
         stitcher = EvaluationSequence(n=n, directory=directory)
@@ -171,16 +146,35 @@ class Sequence:
     @_requiresPrimed
     def measure(self, n=16):
         t0 = time.time()
-        input(_C.YEL +
-              'Insert electrode with calibration ring and close door [Press any key when ready]' +
-              _C.ENDC)
+        scan = input(_C.YEL +
+                     'Insert electrode with calibration ring and scan serial: ' +
+                     _C.ENDC)
+        print(scan)
         CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
         print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
-        stitcher = CombinedSequence(n=n, directory='hardware/combined')
+        spiral = CombinedSequence(n=n, directory='hardware/combined')
         print(_C.CYAN + _C.BOLD + 'Measurement completed in ' + str(round(time.time() - t0, 2)) + 's' + _C.ENDC)
-        return stitcher
+        return spiral
 
     def measureOffsite(self, n=16, directory='hardware/combined'):
         print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
-        stitcher = CombinedSequence(n=n, directory=directory)
-        return stitcher
+        spiral = CombinedSequence(n=n, directory=directory)
+        return spiral
+
+    def storeSpiral(self, spiral, fn=None):
+        phis, rs, scale = spiral
+        t = datetime.datetime.now()
+        timestamp = (str(t.year) + '-' + str(t.month) + '-' + str(t.day) + '-' +
+                     str(t.hour) + '-' + str(t.minute) + '-' + str(t.second))
+
+        attributes = {'serial': 0,
+                      'timestamp': timestamp,
+                      'scale': scale,
+                      }
+
+        fn = 'CSAT_' + str(attributes['serial']) + '.h5'
+
+        with h5py.File(__location__ + '/data/' + fn, 'w') as f:
+            for key in attributes:
+                f.attrs[key] = attributes[key]
+            h5spiral = f.create_dataset('spiral', data=[phis, rs])

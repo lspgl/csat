@@ -23,10 +23,10 @@ def CombinedSequence(n, directory):
     s = Stitcher(fns, calibration=calibration, mpflag=True)
     s.loadImages()
     segments = s.stitchImages(plot=False)
-    s.combineSegments(segments)
+    spiral = s.combineSegments(segments, plot=True)
     print(_C.BOLD + _C.CYAN + 'Detection completed in ' + str(round(time.time() - t1, 2)) + 's' + _C.ENDC)
     print(_C.BOLD + _C.CYAN + 'Computation Completed in ' + str(round(time.time() - t0, 2)) + 's' + _C.ENDC)
-    return s
+    return spiral
 
 
 if __name__ == '__main__':

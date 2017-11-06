@@ -9,3 +9,4 @@ sectorImage/img/out/*.png
 *cpt*.jpg
 hardware/*.jpg
 hardware/shielded
+*.h5

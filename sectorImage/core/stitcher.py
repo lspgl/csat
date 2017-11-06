@@ -7,6 +7,7 @@ from .toolkit.colors import Colors as _C
 from .toolkit import vectools
 from .toolkit.segment import Segment
 import matplotlib.pyplot as plt
+from matplotlib.patches import Wedge
 import sys
 import os
 
@@ -99,23 +100,27 @@ class Stitcher:
 
         return segments
 
-    def combineSegments(self, segments, plot=True):
+    def combineSegments(self, segments, plot=False):
         segments = [Segment(*coords, identity=i) for i, coords in enumerate(segments)]
-
         # Calibrate to mm
-        calib_sizes = np.array(0)
+        calib_sizes = np.empty(0)
         for i in range(len(self.fns)):
             img_segs = [s for s in segments if s.imgNum == i]
             calib_seg = max(img_segs, key=operator.attrgetter('bandNum'))
             size = np.mean(calib_seg.rs)
             calib_sizes = np.append(calib_sizes, size)
         calib_size_px = np.mean(calib_sizes)
-        print(calib_size_px)
-        calib_size_mm = 68.0
+
+        # Dimensions of the calibration piece
+        calib_size_mm = 68.0 / 2.0
+        tolerance = 1.0
+        calib_width_mm = 6.55 * tolerance
+
         scale = calib_size_mm / calib_size_px
 
+        calibrationCutoff = (calib_size_mm - calib_width_mm) / scale
         # This should be calculated from the physical size
-        calibrationCutoff = 4800
+        # calibrationCutoff = 4800
         segments = [s for s in segments if np.min(s.rs) < calibrationCutoff]
 
         connected_ids = []
@@ -150,10 +155,10 @@ class Stitcher:
         order = np.argsort(avgR)
         bands = np.array(bands)[order]
 
-        compP = np.array(0)
-        compR = np.array(0)
-        compX = np.array(0)
-        compY = np.array(0)
+        compP = np.empty(0)
+        compR = np.empty(0)
+        compX = np.empty(0)
+        compY = np.empty(0)
         for i, b in enumerate(bands):
             compR = np.append(compR, b[1])
             phi = b[0] + i * 2 * np.pi
@@ -166,18 +171,47 @@ class Stitcher:
         compY = compR * np.sin(compP)
 
         if plot:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            ax.plot(compX, compY, lw=0.5)
+            figPolar = plt.figure()
+            figCart = plt.figure()
+            axPolar = figPolar.add_subplot(111)
+            axCart = figCart.add_subplot(111)
 
-            ax.set_xlabel('X [mm]')
-            ax.set_ylabel('Y [mm]')
-            ax.set_aspect('equal')
-            ax.set_title('Reconstructed Spiral')
+            axPolar.plot(compP, compR, lw=0.5, c='black')
+            axPolar.axhline(y=calibrationCutoff * scale, lw=0.8, ls='-.', c='red')
 
-            fig.savefig(__location__ + '/../img/out/combined.png', dpi=600)
+            axCart.plot(compX, compY, lw=0.5, c='black')
+            cutoffCircle = plt.Circle((0, 0), calibrationCutoff * scale,
+                                      edgecolor='red',
+                                      facecolor='none',
+                                      lw=0.8,
+                                      ls='-.')
+            calibrationCircle = plt.Circle((0, 0), calib_size_mm,
+                                           edgecolor='red',
+                                           facecolor='none',
+                                           lw=0.8,)
+            wedge = Wedge((0, 0), calib_size_mm, 0, 360, width=calib_width_mm, color='red', alpha=0.1)
+            axCart.add_artist(cutoffCircle)
+            axCart.add_artist(calibrationCircle)
+            axCart.add_artist(wedge)
+            axCart.scatter(0, 0, marker='+', lw=0.5, color='red')
 
-        return (compP, compR)
+            axPolar.set_xlabel('Phi [rad]')
+            axPolar.set_ylabel('Radius [mm]')
+
+            axCart.set_xlabel('X [mm]')
+            axCart.set_ylabel('Y [mm]')
+            rmax = calib_size_mm * 1.1
+            axCart.set_xlim([-rmax, rmax])
+            axCart.set_ylim([-rmax, rmax])
+            axCart.set_aspect('equal')
+
+            axPolar.set_title('Reconstructed Spiral')
+            axCart.set_title('Reconstructed Spiral')
+
+            figPolar.savefig(__location__ + '/../img/out/combinedPolar.png', dpi=300)
+            figCart.savefig(__location__ + '/../img/out/combinedCart.png', dpi=300)
+
+        return (compP, compR, scale)
 
     def loadSegments(self, fn='stitched.npy'):
         fn = __location__ + '/../data/' + fn

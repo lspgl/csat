@@ -25,9 +25,11 @@ def Parmap(f, X, *args, nprocs=mp.cpu_count(), **kwargs):
     q_out = mp.Queue()
     proc = [mp.Process(target=fun, args=(f, q_in, q_out, args, kwargs))
             for _ in range(nprocs)]
+
     for p in proc:
         p.daemon = True
         p.start()
+
     sent = [q_in.put((i, x)) for i, x in enumerate(X)]
     [q_in.put((None, None)) for _ in range(nprocs)]
     res = [q_out.get() for _ in range(len(sent))]
