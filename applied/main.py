@@ -5,14 +5,15 @@ __location__ = os.path.realpath(
 sys.path.append(__location__)
 
 from sequence import Sequence
+from pair import Pair
 
 
 def main():
     s = Sequence(offsite=True)
     s.prime()
-    pair = s.measure(n=16)
-    pair.store()
-    pair.load()
+    #pair = s.measure(n=16)
+    # pair.store()
+    pair = Pair('CSAT_LabTest.h5', fromFile=True)
     # s.storeSpiral(spiral)
     s.disable()
 
