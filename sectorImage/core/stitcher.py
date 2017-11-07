@@ -110,7 +110,7 @@ class Stitcher:
                 if plot:
                     ax.plot(phis, rs, lw=0.5)
             # segments.append(img_segs)
-        print(rstart, pstart, ampstart)
+        self.startAngle = pstart
         if plot:
             ax.set_xlabel('Angle [rad]')
             ax.set_ylabel('Radius [px]')
@@ -168,7 +168,10 @@ class Stitcher:
         left_starts = sorted([s for s in segments if s.imgNum == 0], key=operator.attrgetter('comR'))
         chirality = 1
         bands = []
+        Lbreak = 0
+
         for start in left_starts:
+            skipFlag = False
             combined = [start]
             connected_ids.append(start.identity)
             # for i in range(len(self.fns) - 1):
@@ -185,6 +188,9 @@ class Stitcher:
                 nearestPt = min(candidates_lp, key=lambda x: abs(x[1] - ep[1]))
                 if abs(nearestPt[1] - ep[1]) > 0.25 * pitch:
                     print('breaking left')
+                    Lbreak += 1
+                    if Lbreak > 1:
+                        skipFlag = True
                     break
                 nearest_idx = candidates_lp.index(nearestPt)
                 nearest_seg = candidates[nearest_idx]
@@ -192,15 +198,17 @@ class Stitcher:
                 connected_ids.append(nearest_seg.identity)
             bandR = np.empty(0)
             bandP = np.empty(0)
-            for c in combined:
-                bandR = np.append(bandR, c.rs)
-                bandP = np.append(bandP, c.phis)
-            order = np.argsort(bandP)
-            bandR = bandR[order]
-            bandP = bandP[order]
-            bands.append([bandP, bandR])
+            if not skipFlag:
+                for c in combined:
+                    bandR = np.append(bandR, c.rs)
+                    bandP = np.append(bandP, c.phis)
+                order = np.argsort(bandP)
+                bandR = bandR[order]
+                bandP = bandP[order]
+                bands.append([bandP, bandR])
         right_starts = sorted([s for s in segments if s.imgNum == len(self.fns) -
                                1 and s.identity not in connected_ids], key=operator.attrgetter('comR'))
+        Rbreak = 0
         for start in right_starts:
             combined = [start]
             connected_ids.append(start.identity)
@@ -217,6 +225,7 @@ class Stitcher:
                 nearestPt = min(candidates_ep, key=lambda x: abs(x[1] - lp[1]))
                 if abs(nearestPt[1] - lp[1]) > 0.25 * pitch:
                     print('breaking')
+                    Rbreak += 1
                     break
                 nearest_idx = candidates_ep.index(nearestPt)
                 nearest_seg = candidates[nearest_idx]
@@ -225,13 +234,14 @@ class Stitcher:
 
             bandR = np.empty(0)
             bandP = np.empty(0)
-            for c in combined:
-                bandR = np.append(bandR, c.rs)
-                bandP = np.append(bandP, c.phis)
-            order = np.argsort(bandP)
-            bandR = bandR[order]
-            bandP = bandP[order]
-            bands.append([bandP, bandR])
+            if Rbreak <= 1:
+                for c in combined:
+                    bandR = np.append(bandR, c.rs)
+                    bandP = np.append(bandP, c.phis)
+                order = np.argsort(bandP)
+                bandR = bandR[order]
+                bandP = bandP[order]
+                bands.append([bandP, bandR])
         if len(segments) != len(connected_ids):
             print(len(segments))
             print(len(connected_ids))
@@ -265,9 +275,15 @@ class Stitcher:
             compP = compP[order]
 
         compR = compR[order] * scale
+        # Cut band start
+        print(self.startAngle)
+        print(compP)
+        start_idx = np.argmax(chirality * compP[::chirality] > self.startAngle)
+        compP = compP[::chirality][start_idx:][::chirality]
+        compR = compR[::chirality][start_idx:][::chirality]
+        print(start_idx)
 
         deltas = [abs(r - compR[i + 1]) for i, r in enumerate(compR[:-1])]
-        print(max(deltas))
         compX = compR * np.cos(compP)
         compY = compR * np.sin(compP)
 

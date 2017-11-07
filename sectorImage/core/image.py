@@ -305,14 +305,16 @@ class Image:
         # Gaussian Blur to remove fast features
 
         cv2.GaussianBlur(src=matrix, ksize=(0, 3), dst=proc, sigmaX=3, sigmaY=0)
+        cv2.GaussianBlur(src=matrix[:, :start_range], ksize=(3, 0), dst=start_search, sigmaX=0, sigmaY=3)
 
         # print('Convolving')
         # Convolving with Prewitt kernel in x-direction
         prewitt_kernel_x = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
         width = 30
         prewitt_kernel_y = np.array([[1] * width, [0] * width, [-1] * width])
-        cv2.filter2D(src=proc[:, :start_range], kernel=prewitt_kernel_y, dst=start_search, ddepth=-1)
+        cv2.filter2D(src=start_search, kernel=prewitt_kernel_y, dst=start_search, ddepth=-1)
         cv2.filter2D(src=proc, kernel=prewitt_kernel_x, dst=proc, ddepth=-1)
+        np.absolute(start_search, out=start_search)
         start_amp = start_search.max()
         start_idx = np.unravel_index(start_search.argmax(), start_search.shape)
         start = (start_idx, start_amp)
@@ -360,7 +362,7 @@ class Image:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.imshow(proc)
+            ax.imshow(start_search)
             ax.set_aspect('auto')
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')

@@ -15,7 +15,7 @@ def main():
     t0 = time.time()
 
     #fns = ['img/src/cpt' + str(i) + '.jpg' for i in range(1, 23)]
-    # fns = ['../hardware/combined/cpt' + str(i) + '.jpg' for i in range(1, 17)]
+    fns = ['../hardware/combined/cpt' + str(i) + '.jpg' for i in range(1, 17)]
     # fns = ['../hardware/combined/cpt5.jpg']
     s = stitcher.Stitcher(fns, mpflag=False, env=Environment)
     s.loadImages()
