@@ -12,9 +12,9 @@ sys.path.append(__location__ + '/../')
 
 class Pair:
 
-    def __init__(self, *args, fromFile=False):
+    def __init__(self, *args, fromFile=False, **kwargs):
         if not fromFile:
-            self.initializeFromMeasurement(*args)
+            self.initializeFromMeasurement(*args, **kwargs)
         else:
             self.load(*args)
 
