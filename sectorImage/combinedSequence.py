@@ -10,7 +10,7 @@ from core.toolkit.colors import Colors as _C
 import time
 
 
-def CombinedSequence(n, directory):
+def CombinedSequence(n, directory, env):
     t0 = time.time()
     fns = [directory + '/cpt' + str(i) + '.jpg' for i in range(1, n + 1)]
     c = Calibrator(fns)
@@ -20,13 +20,13 @@ def CombinedSequence(n, directory):
     # c.plotCalibration()
     print(_C.BOLD + _C.CYAN + 'Calibration completed in ' + str(round(time.time() - t0, 2)) + 's' + _C.ENDC)
     t1 = time.time()
-    s = Stitcher(fns, calibration=calibration, mpflag=True)
+    s = Stitcher(fns, calibration=calibration, mpflag=True, env=env)
     s.loadImages()
-    segments = s.stitchImages(plot=False)
+    segments = s.stitchImages(plot=True)
     spiral = s.combineSegments(segments, plot=True)
     print(_C.BOLD + _C.CYAN + 'Detection completed in ' + str(round(time.time() - t1, 2)) + 's' + _C.ENDC)
     print(_C.BOLD + _C.CYAN + 'Computation Completed in ' + str(round(time.time() - t0, 2)) + 's' + _C.ENDC)
-    return spiral
+    return (spiral, calibration)
 
 
 if __name__ == '__main__':

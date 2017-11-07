@@ -13,6 +13,10 @@ from hardware.camera import Camera
 from hardware.stepper import Stepper
 from hardware.coupledCapture import CoupledCapture
 
+from electrode import Electrode
+from pair import Pair
+from environment import Environment as env
+
 from sectorImage.calibrationSequence import CalibrationSequence
 from sectorImage.evaluationSequence import EvaluationSequence
 from sectorImage.combinedSequence import CombinedSequence
@@ -35,7 +39,6 @@ class Sequence:
         """
         self.offsite = offsite
         print(_C.CYAN + _C.BOLD + 'Initializing sequence' + _C.ENDC)
-
         if self.offsite:
             self.prime = self._placeholder
             self.disable = self._placeholder
@@ -146,20 +149,31 @@ class Sequence:
     @_requiresPrimed
     def measure(self, n=16):
         t0 = time.time()
-        scan = input(_C.YEL +
-                     'Insert electrode with calibration ring and scan serial: ' +
-                     _C.ENDC)
-        print(scan)
+        serial = input(_C.YEL +
+                       'Insert 1st electrode with calibration ring and scan serial: ' +
+                       _C.ENDC)
         CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
         print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
-        spiral = CombinedSequence(n=n, directory='hardware/combined')
+        spiral, calibration = CombinedSequence(n=n, directory='hardware/combined', env=env)
         print(_C.CYAN + _C.BOLD + 'Measurement completed in ' + str(round(time.time() - t0, 2)) + 's' + _C.ENDC)
-        return spiral
+        electrode1 = Electrode(serial, spiral, calibration)
+
+        input(_C.YEL + 'Insert 2nd electrode with calibration and press [Enter]')
+        CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
+        print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
+        spiral, calibration = CombinedSequence(n=n, directory='hardware/combined', env=env)
+        print(_C.CYAN + _C.BOLD + 'Measurement completed in ' + str(round(time.time() - t0, 2)) + 's' + _C.ENDC)
+        electrode2 = Electrode(serial, spiral, calibration)
+
+        pair = Pair(env=env, electrodes=(electrode1, electrode2), serial=serial)
+        return pair
 
     def measureOffsite(self, n=16, directory='hardware/combined'):
+        serial = 'RD-OFFSITE'
         print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
-        spiral = CombinedSequence(n=n, directory=directory)
-        return spiral
+        spiral, calibration = CombinedSequence(n=n, directory=directory, env=env)
+        electrode = Electrode(serial, spiral, calibration)
+        return electrode
 
     def storeSpiral(self, spiral, fn=None):
         phis, rs, scale = spiral

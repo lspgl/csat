@@ -10,8 +10,10 @@ from sequence import Sequence
 def main():
     s = Sequence(offsite=True)
     s.prime()
-    spiral = s.measure(n=16)
-    s.storeSpiral(spiral)
+    pair = s.measure(n=16)
+    pair.store()
+    pair.load()
+    # s.storeSpiral(spiral)
     s.disable()
 
 
