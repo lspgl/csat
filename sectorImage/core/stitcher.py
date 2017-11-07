@@ -98,7 +98,7 @@ class Stitcher:
             stepsize_angles = (image.angles[-1] - image.angles[0]) / len(image.angles)
             stepsize_radii = (image.radii[-1] - image.radii[0]) / len(image.radii)
             if image.start[1] > ampstart:
-                rstart = image.start[0][1] * stepsize_radii
+                # rstart = image.start[0][1] * stepsize_radii
                 pstart = (image.start[0][0] * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
                 ampstart = image.start[1]
             for j, coord in enumerate(zip(image.r, image.phi)):
@@ -210,6 +210,7 @@ class Stitcher:
                                1 and s.identity not in connected_ids], key=operator.attrgetter('comR'))
         Rbreak = 0
         for start in right_starts:
+            skipFlag = False
             combined = [start]
             connected_ids.append(start.identity)
             # for i in range(len(self.fns) - 1):
@@ -226,6 +227,8 @@ class Stitcher:
                 if abs(nearestPt[1] - lp[1]) > 0.25 * pitch:
                     print('breaking')
                     Rbreak += 1
+                    if Rbreak > 1:
+                        skipFlag = True
                     break
                 nearest_idx = candidates_ep.index(nearestPt)
                 nearest_seg = candidates[nearest_idx]
@@ -234,7 +237,7 @@ class Stitcher:
 
             bandR = np.empty(0)
             bandP = np.empty(0)
-            if Rbreak <= 1:
+            if not skipFlag:
                 for c in combined:
                     bandR = np.append(bandR, c.rs)
                     bandP = np.append(bandP, c.phis)
@@ -278,6 +281,7 @@ class Stitcher:
         # Cut band start
         start_idx = np.argmax(chirality * compP[::chirality] > self.startAngle)
         compP = compP[::chirality][start_idx:][::chirality]
+        compP -= compP[::chirality][0]
         compR = compR[::chirality][start_idx:][::chirality]
 
         compX = compR * np.cos(compP)
