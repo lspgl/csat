@@ -276,14 +276,10 @@ class Stitcher:
 
         compR = compR[order] * scale
         # Cut band start
-        print(self.startAngle)
-        print(compP)
         start_idx = np.argmax(chirality * compP[::chirality] > self.startAngle)
         compP = compP[::chirality][start_idx:][::chirality]
         compR = compR[::chirality][start_idx:][::chirality]
-        print(start_idx)
 
-        deltas = [abs(r - compR[i + 1]) for i, r in enumerate(compR[:-1])]
         compX = compR * np.cos(compP)
         compY = compR * np.sin(compP)
 
@@ -293,7 +289,6 @@ class Stitcher:
             axPolar = figPolar.add_subplot(111)
             axCart = figCart.add_subplot(111)
             axPolar.plot(compP, compR, lw=0.5, c='black')
-            # axPolar.plot(deltas)
             axPolar.axhline(y=calibrationCutoff * scale, lw=0.8, ls='-.', c='red')
             axPolar.axhline(y=calib_size_px * scale, lw=0.8, c='red')
             axPolar.fill_between([0, compP[-1]], calibrationCutoff * scale,
