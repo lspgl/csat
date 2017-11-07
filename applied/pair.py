@@ -12,7 +12,13 @@ sys.path.append(__location__ + '/../')
 
 class Pair:
 
-    def __init__(self, env, electrodes, serial):
+    def __init__(self, *args, fromFile=False):
+        if not fromFile:
+            self.initializeFromMeasurement(*args)
+        else:
+            self.load(*args)
+
+    def initializeFromMeasurement(self, env, electrodes, serial):
         self.env = env
         self.electrodes = sorted(electrodes, key=operator.attrgetter('chirality'))
         if self.electrodes[0].chirality == self.electrodes[1].chirality:
@@ -25,6 +31,8 @@ class Pair:
     def store(self):
         attributes = {'serial': self.serial,
                       'timestamp': self.timestamp,
+                      'calib size': self.env.calib_size_mm,
+                      'calib width': self.env.calib_width_mm,
                       }
 
         fn = 'CSAT_' + self.serial + '.h5'
@@ -41,18 +49,18 @@ class Pair:
                 g.attrs['Scale'] = e.scale
                 g.create_dataset('calibration', data=e.calibration)
 
-    def load(self, fn=None):
-        if fn is None:
-            fn = 'CSAT_' + self.serial + '.h5'
+    def load(self, fn):
         self.electrodes = []
         with h5py.File(__location__ + '/data/' + fn, 'r') as f:
             attributes = f.attrs
+            for attr in attributes:
+                setattr(self, attr, attributes[attr])
             groups = [f['L-Spiral'], f['R-Spiral']]
             for i, g in enumerate(groups):
                 phis = g['spiral'][0]
                 rs = g['spiral'][1]
                 calibration = g['calibration'][:]
                 chirality = (i * 2) - 1
-                scale = g.attrs['scale']
+                scale = g.attrs['Scale']
                 payload = (phis, rs, scale, chirality)
                 self.electrodes.append(Electrode(self.serial, payload, calibration))
