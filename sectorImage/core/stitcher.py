@@ -166,7 +166,6 @@ class Stitcher:
         connected_ids = []
         segments_sorted = sorted(segments, key=operator.attrgetter('comP'))
         left_starts = sorted([s for s in segments if s.imgNum == 0], key=operator.attrgetter('comR'))
-        right_starts = sorted([s for s in segments if s.imgNum == len(self.fns) - 1], key=operator.attrgetter('comR'))
         chirality = 1
         bands = []
         for start in left_starts:
@@ -184,7 +183,7 @@ class Stitcher:
                 candidates_lp = [c.lp for c in candidates]
                 # sortedPt = sorted(candidates_lp, key=lambda x: vectools.pointdistPolar(x, ep))
                 nearestPt = min(candidates_lp, key=lambda x: abs(x[1] - ep[1]))
-                if abs(nearestPt[1] - ep[1]) > 0.5 * pitch:
+                if abs(nearestPt[1] - ep[1]) > 0.25 * pitch:
                     print('breaking left')
                     break
                 nearest_idx = candidates_lp.index(nearestPt)
@@ -202,7 +201,6 @@ class Stitcher:
             bands.append([bandP, bandR])
         right_starts = sorted([s for s in segments if s.imgNum == len(self.fns) -
                                1 and s.identity not in connected_ids], key=operator.attrgetter('comR'))
-
         for start in right_starts:
             combined = [start]
             connected_ids.append(start.identity)
@@ -217,13 +215,14 @@ class Stitcher:
                 lp = combined[-1].lp
                 candidates_ep = [c.ep for c in candidates]
                 nearestPt = min(candidates_ep, key=lambda x: abs(x[1] - lp[1]))
-                if abs(nearestPt[1] - lp[1]) > 0.5 * pitch:
+                if abs(nearestPt[1] - lp[1]) > 0.25 * pitch:
                     print('breaking')
                     break
                 nearest_idx = candidates_ep.index(nearestPt)
                 nearest_seg = candidates[nearest_idx]
                 combined.append(nearest_seg)
                 connected_ids.append(nearest_seg.identity)
+
             bandR = np.empty(0)
             bandP = np.empty(0)
             for c in combined:
@@ -233,11 +232,10 @@ class Stitcher:
             bandR = bandR[order]
             bandP = bandP[order]
             bands.append([bandP, bandR])
-
         if len(segments) != len(connected_ids):
             print(len(segments))
             print(len(connected_ids))
-            raise Exception('Disconnected segments')
+            #  raise Exception('Disconnected segments')
 
         avgR = [np.mean(b[1]) for b in bands]
         order = np.argsort(avgR)
@@ -253,19 +251,23 @@ class Stitcher:
             compP = np.append(compP, phi)
         order = np.argsort(compP)
         compP = compP[order]
-        compR = compR[order] * scale
+
         deltas = [abs(r - compR[i + 1]) for i, r in enumerate(compR[:-1])]
-        if max(deltas) > 1.0:
+        if max(deltas) > 0.8 * pitch:
             compP = np.empty(0)
+            compR = np.empty(0)
             chirality *= -1
             for i, b in enumerate(bands):
+                compR = np.append(compR, b[1])
                 phi = b[0] + i * chirality * 2 * np.pi
                 compP = np.append(compP, phi)
             order = np.argsort(compP)
             compP = compP[order]
-            compR = compR[order] * scale
+
+        compR = compR[order] * scale
 
         deltas = [abs(r - compR[i + 1]) for i, r in enumerate(compR[:-1])]
+        print(max(deltas))
         compX = compR * np.cos(compP)
         compY = compR * np.sin(compP)
 
@@ -274,8 +276,8 @@ class Stitcher:
             figCart = plt.figure()
             axPolar = figPolar.add_subplot(111)
             axCart = figCart.add_subplot(111)
-            # axPolar.plot(compP, compR, lw=0.5, c='black')
-            axPolar.plot(deltas)
+            axPolar.plot(compP, compR, lw=0.5, c='black')
+            # axPolar.plot(deltas)
             axPolar.axhline(y=calibrationCutoff * scale, lw=0.8, ls='-.', c='red')
             axPolar.axhline(y=calib_size_px * scale, lw=0.8, c='red')
             axPolar.fill_between([0, compP[-1]], calibrationCutoff * scale,
