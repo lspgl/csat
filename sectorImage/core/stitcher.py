@@ -93,10 +93,14 @@ class Stitcher:
             ax = fig.add_subplot(111)
 
         segments = []
+        ampstart = 0
         for i, image in enumerate(self.images[::-1]):
             stepsize_angles = (image.angles[-1] - image.angles[0]) / len(image.angles)
             stepsize_radii = (image.radii[-1] - image.radii[0]) / len(image.radii)
-            # img_segs = []
+            if image.start[1] > ampstart:
+                rstart = image.start[0][1] * stepsize_radii
+                pstart = (image.start[0][0] * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
+                ampstart = image.start[1]
             for j, coord in enumerate(zip(image.r, image.phi)):
                 rs, phis = coord
                 phis = (np.array(phis) * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
@@ -106,6 +110,7 @@ class Stitcher:
                 if plot:
                     ax.plot(phis, rs, lw=0.5)
             # segments.append(img_segs)
+        print(rstart, pstart, ampstart)
         if plot:
             ax.set_xlabel('Angle [rad]')
             ax.set_ylabel('Radius [px]')

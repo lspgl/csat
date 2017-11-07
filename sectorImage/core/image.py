@@ -296,18 +296,26 @@ class Image:
 
         """
         # t0 = time.time()
-
+        start_range = 2000
         # Initializing Empty array in Memory
         proc = np.empty(np.shape(matrix))
+        start_search = np.empty(np.shape(matrix))[:, :start_range]
         matrix = matrix.astype(np.float64, copy=False)
         # print('Blurring')
         # Gaussian Blur to remove fast features
+
         cv2.GaussianBlur(src=matrix, ksize=(0, 3), dst=proc, sigmaX=3, sigmaY=0)
 
         # print('Convolving')
         # Convolving with Prewitt kernel in x-direction
-        prewitt_kernel = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
-        cv2.filter2D(src=proc, kernel=prewitt_kernel, dst=proc, ddepth=-1)
+        prewitt_kernel_x = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
+        width = 30
+        prewitt_kernel_y = np.array([[1] * width, [0] * width, [-1] * width])
+        cv2.filter2D(src=proc[:, :start_range], kernel=prewitt_kernel_y, dst=start_search, ddepth=-1)
+        cv2.filter2D(src=proc, kernel=prewitt_kernel_x, dst=proc, ddepth=-1)
+        start_amp = start_search.max()
+        start_idx = np.unravel_index(start_search.argmax(), start_search.shape)
+        start = (start_idx, start_amp)
         np.abs(proc, out=proc)
         # print('Thresholding')
 
@@ -359,4 +367,4 @@ class Image:
             fig.savefig('img/out/filter.png', dpi=600, interpolation='none')
 
         # print('Features detected in', str(round(time.time() - t0, 2)), 's')
-        return proc  # , loss
+        return proc, start

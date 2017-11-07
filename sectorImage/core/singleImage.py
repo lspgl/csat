@@ -40,7 +40,7 @@ class SingleImage:
 
         # self.coverage = self.img.thetaCovered
         # self.features, self.loss = self.img.detectFeatures(angularLines, plot=True)
-        self.features = self.img.detectFeatures(angularLines, plot=False)
+        self.features, self.start = self.img.detectFeatures(angularLines, plot=True)
 
         # self.angles = self.angles[int(self.loss / 2):int(-self.loss / 2)]
         if npz is not None:
