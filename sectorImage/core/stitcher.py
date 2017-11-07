@@ -180,8 +180,6 @@ class Stitcher:
                 # sortedPt = sorted(candidates_lp, key=lambda x: vectools.pointdistPolar(x, ep))
                 nearestPt = min(candidates_lp, key=lambda x: abs(x[1] - ep[1]))
                 if abs(nearestPt[1] - ep[1]) > 0.5 * pitch:
-                    if combined[-1].bandNum == 0:
-                        chirality = -1
                     print('breaking left')
                     break
                 nearest_idx = candidates_lp.index(nearestPt)
@@ -215,8 +213,6 @@ class Stitcher:
                 candidates_ep = [c.ep for c in candidates]
                 nearestPt = min(candidates_ep, key=lambda x: abs(x[1] - lp[1]))
                 if abs(nearestPt[1] - lp[1]) > 0.5 * pitch:
-                    if combined[-1].bandNum == 0:
-                        chirality = 1
                     print('breaking')
                     break
                 nearest_idx = candidates_ep.index(nearestPt)
@@ -234,6 +230,8 @@ class Stitcher:
             bands.append([bandP, bandR])
 
         if len(segments) != len(connected_ids):
+            print(len(segments))
+            print(len(connected_ids))
             raise Exception('Disconnected segments')
 
         avgR = [np.mean(b[1]) for b in bands]
@@ -248,10 +246,21 @@ class Stitcher:
             compR = np.append(compR, b[1])
             phi = b[0] + i * chirality * 2 * np.pi
             compP = np.append(compP, phi)
-
         order = np.argsort(compP)
         compP = compP[order]
         compR = compR[order] * scale
+        deltas = [abs(r - compR[i + 1]) for i, r in enumerate(compR[:-1])]
+        if max(deltas) > 1.0:
+            compP = np.empty(0)
+            chirality *= -1
+            for i, b in enumerate(bands):
+                phi = b[0] + i * chirality * 2 * np.pi
+                compP = np.append(compP, phi)
+            order = np.argsort(compP)
+            compP = compP[order]
+            compR = compR[order] * scale
+
+        deltas = [abs(r - compR[i + 1]) for i, r in enumerate(compR[:-1])]
         compX = compR * np.cos(compP)
         compY = compR * np.sin(compP)
 
@@ -260,8 +269,8 @@ class Stitcher:
             figCart = plt.figure()
             axPolar = figPolar.add_subplot(111)
             axCart = figCart.add_subplot(111)
-
-            axPolar.plot(compP, compR, lw=0.5, c='black')
+            # axPolar.plot(compP, compR, lw=0.5, c='black')
+            axPolar.plot(deltas)
             axPolar.axhline(y=calibrationCutoff * scale, lw=0.8, ls='-.', c='red')
             axPolar.axhline(y=calib_size_px * scale, lw=0.8, c='red')
             axPolar.fill_between([0, compP[-1]], calibrationCutoff * scale,
