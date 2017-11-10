@@ -9,12 +9,14 @@ from pair import Pair
 
 
 def main():
-    s = Sequence(offsite=True)
+    s = Sequence(offsite=False)
     s.prime()
     pair = s.measure(n=16)
-    pair.store()
+    # pair.store()
     # pair.load()
-    # pair = Pair('CSAT_LabTest.h5', fromFile=True)
+    #pair = Pair('CSAT_LabTest.h5', fromFile=True)
+    pair.computeGap()
+    pair.plot()
     # s.storeSpiral(spiral)
     s.disable()
 

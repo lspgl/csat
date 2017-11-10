@@ -280,9 +280,14 @@ class Stitcher:
         compR = compR[order] * scale
         # Cut band start
         start_idx = np.argmax(chirality * compP[::chirality] > self.startAngle)
+        print(chirality)
+        print(compP)
         compP = compP[::chirality][start_idx:][::chirality]
+        print(compP)
         compP -= compP[::chirality][0]
+        print(compP)
         compR = compR[::chirality][start_idx:][::chirality]
+        print(compR)
 
         compX = compR * np.cos(compP)
         compY = compR * np.sin(compP)

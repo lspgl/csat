@@ -3,6 +3,11 @@ import h5py
 import datetime
 from electrode import Electrode
 
+import numpy as np
+
+import matplotlib.pyplot as plt
+
+
 import os
 import sys
 __location__ = os.path.realpath(
@@ -60,7 +65,43 @@ class Pair:
                 phis = g['spiral'][0]
                 rs = g['spiral'][1]
                 calibration = g['calibration'][:]
-                chirality = (i * 2) - 1
+                chirality = -((i * 2) - 1)
                 scale = g.attrs['Scale']
                 payload = (phis, rs, scale, chirality)
                 self.electrodes.append(Electrode(self.serial, payload, calibration))
+
+    def computeGap(self):
+        lengths = []
+        max_phis = []
+        for e in self.electrodes:
+            print(e.chirality)
+            phiAbs = np.abs(e.phis)[::e.chirality]
+            npts = len(phiAbs)
+            lengths.append(npts)
+            pmax = phiAbs[-1]
+            max_phis.append(pmax)
+        max_length = min(lengths)
+        max_phi = min(max_phis)
+
+        global_phis = np.linspace(0, max_phi, num=max_length, endpoint=True)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        for i, e in enumerate(self.electrodes):
+            r_interp = np.interp(global_phis, np.abs(e.phis)[::e.chirality], e.rs[::e.chirality])
+            global_phis += i * np.pi
+            x = r_interp * np.cos(global_phis)
+            y = r_interp * np.sin(global_phis)
+            ax.plot(x, y, lw=1)
+        ax.set_aspect('equal')
+        fig.savefig(__location__ + '/data/plots/' + str(self.serial) + '_interpolated.png', dpi=300)
+
+    def plot(self):
+        fig = plt.figure()
+        ax1 = fig.add_subplot(121)
+        ax2 = fig.add_subplot(122)
+        axes = [ax1, ax2]
+
+        for i, ax in enumerate(axes):
+            ax.plot(self.electrodes[i].phis, self.electrodes[i].rs)
+
+        fig.savefig(__location__ + '/data/plots/' + str(self.serial) + '.png', dpi=300)

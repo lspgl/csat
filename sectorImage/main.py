@@ -17,8 +17,10 @@ def main():
     #fns = ['img/src/cpt' + str(i) + '.jpg' for i in range(1, 23)]
     fns = ['../hardware/combined/cpt' + str(i) + '.jpg' for i in range(1, 17)]
     # fns = ['../hardware/combined/cpt5.jpg']
-    s = stitcher.Stitcher(fns, mpflag=False, env=Environment)
+    s = stitcher.Stitcher(fns, mpflag=True, env=Environment)
     s.loadImages()
+    segments = s.stitchImages(plot=True)
+    spiral = s.combineSegments(segments, plot=True)
     # s.pickleSave()
 
     #p = pickler.Pickler()
