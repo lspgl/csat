@@ -91,12 +91,17 @@ class Stitcher:
             stepsize_radii = (image.radii[-1] - image.radii[0]) / len(image.radii)
             if image.start[1] > ampstart:
                 # rstart = image.start[0][1] * stepsize_radii
-                pstart = (image.start[0][0] * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
+                # pstart = (image.start[0][0] * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
+                print(image.start[0][0])
+                pstart = (image.angles[image.start[0][0]] + (i * 2 * np.pi / len(self.fns)))
+                print(pstart)
                 ampstart = image.start[1]
             for j, coord in enumerate(zip(image.r, image.phi)):
                 rs, phis = coord
-                phis = (np.array(phis) * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
-                rs = (np.array(rs) * stepsize_radii)
+                # phis = (np.array(phis) * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
+                phis = image.angles[np.array(phis)] + (i * 2 * np.pi / len(self.fns))
+                #rs = (np.array(rs) * stepsize_radii) + image.radii[0]
+                rs = image.radii[np.array(rs)]
                 s = (phis, rs, i, j)
                 segments.append(s)
                 if plot:

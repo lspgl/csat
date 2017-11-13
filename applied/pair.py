@@ -33,7 +33,9 @@ class Pair:
         self.timestamp = (str(t.year) + '-' + str(t.month) + '-' + str(t.day) + '-' +
                           str(t.hour) + '-' + str(t.minute) + '-' + str(t.second))
 
-    def store(self):
+    def store(self, fn=None):
+        if fn is not None:
+            self.serial = fn
         attributes = {'serial': self.serial,
                       'timestamp': self.timestamp,
                       'calib size': self.env.calib_size_mm,
@@ -87,11 +89,9 @@ class Pair:
         ax = fig.add_subplot(111)
         for i, e in enumerate(self.electrodes):
             r_interp = np.interp(global_phis, np.abs(e.phis)[::e.chirality], e.rs[::e.chirality])
-            # global_phis += i * np.pi
-            shiftx = 0
-            shifty = 0
-            x = r_interp / e.scale * np.cos(global_phis) + i * shiftx
-            y = r_interp / e.scale * np.sin(global_phis) + i * shifty
+            global_phis += i * np.pi
+            x = r_interp * np.cos(global_phis)
+            y = r_interp * np.sin(global_phis)
             ax.plot(x, y, lw=1)
         ax.set_aspect('equal')
         fig.savefig(__location__ + '/data/plots/' + str(self.serial) + '_interpolated.png', dpi=300)
