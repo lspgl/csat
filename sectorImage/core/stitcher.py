@@ -54,19 +54,11 @@ class Stitcher:
         """
 
         if self.mpflag:
-            # mp.set_start_method('spawn')
-            #ncpus = mp.cpu_count()
-            #pool = mp.Pool(ncpus)
             self.images = Parmap(self.singleRoutine, self.fns, self.calibration)
-            # pool.close()
-            # pool.join()
         else:
             for fn in self.fns:
-                # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
                 im = singleImage.SingleImage(fn, self.calibration)
-                # im.getFeatures(npz=npzfn)
                 im.getFeatures()
-                # im.setFeatures(npz=npzfn)
                 im.getLines()
                 self.images.append(im)
 
@@ -256,8 +248,6 @@ class Stitcher:
 
         compP = np.empty(0)
         compR = np.empty(0)
-        compX = np.empty(0)
-        compY = np.empty(0)
         for i, b in enumerate(bands):
             compR = np.append(compR, b[1])
             phi = b[0] + i * chirality * 2 * np.pi
