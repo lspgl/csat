@@ -366,7 +366,7 @@ class Image:
             ax.set_aspect('auto')
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')
-            fig.savefig('img/out/filter.png', dpi=600, interpolation='none')
+            fig.savefig(__location__ + '/../img/out/filter' + str(self.id) + '.png', dpi=600, interpolation='none')
 
         # print('Features detected in', str(round(time.time() - t0, 2)), 's')
         return proc, start

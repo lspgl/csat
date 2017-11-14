@@ -86,20 +86,29 @@ class Stitcher:
 
         segments = []
         ampstart = 0
+        figg = plt.figure()
+        axx = figg.add_subplot(111)
         for i, image in enumerate(self.images[::-1]):
-            stepsize_angles = (image.angles[-1] - image.angles[0]) / len(image.angles)
-            stepsize_radii = (image.radii[-1] - image.radii[0]) / len(image.radii)
+            # stepsize_angles = (image.angles[-1] - image.angles[0]) / len(image.angles)
+            # stepsize_radii = (image.radii[-1] - image.radii[0]) / len(image.radii)
+
             if image.start[1] > ampstart:
                 # rstart = image.start[0][1] * stepsize_radii
                 # pstart = (image.start[0][0] * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
-                print(image.start[0][0])
-                pstart = (image.angles[image.start[0][0]] + (i * 2 * np.pi / len(self.fns)))
-                print(pstart)
+                pstart = image.angles[image.start[0][0]] + (i * 2 * np.pi / len(self.fns))
+
                 ampstart = image.start[1]
+                print(image.start)
+                print(ampstart)
             for j, coord in enumerate(zip(image.r, image.phi)):
                 rs, phis = coord
+                if phis[0] > phis[-1]:
+                    phis = phis[::-1]
+                    rs = rs[::-1]
                 # phis = (np.array(phis) * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
+                axx.plot(phis)
                 phis = image.angles[np.array(phis)] + (i * 2 * np.pi / len(self.fns))
+
                 #rs = (np.array(rs) * stepsize_radii) + image.radii[0]
                 rs = image.radii[np.array(rs)]
                 s = (phis, rs, i, j)
@@ -108,6 +117,7 @@ class Stitcher:
                     ax.plot(phis, rs, lw=0.5)
             # segments.append(img_segs)
         self.startAngle = pstart
+        figg.savefig(__location__ + '/../img/out/debug.png', dpi=300)
         if plot:
             ax.set_xlabel('Angle [rad]')
             ax.set_ylabel('Radius [px]')
@@ -266,6 +276,7 @@ class Stitcher:
             compR = np.empty(0)
             chirality *= -1
             for i, b in enumerate(bands):
+                print(len(b[0]))
                 compR = np.append(compR, b[1])
                 phi = b[0] + i * chirality * 2 * np.pi
                 compP = np.append(compP, phi)
@@ -274,13 +285,27 @@ class Stitcher:
 
         compR = compR[order] * scale
         # Cut band start
-        start_idx = np.argmax(chirality * compP[::chirality] > self.startAngle)
         print(chirality)
         print(compP)
-        compP = compP[::chirality][start_idx:][::chirality]
+        plott = compP[:]
+
+        compP = chirality * compP[::chirality]
         print(compP)
-        compP -= compP[::chirality][0]
+        start_idx = np.argmax(compP > self.startAngle)
+        if start_idx == 0:
+            print('Unraveling Start Angle')
+            self.startAngle += 2 * np.pi
+            start_idx = np.argmax(compP > self.startAngle)
+        print(start_idx)
+        print(compP[start_idx - 1:start_idx + 2])
+        print(self.startAngle)
+        compP = compP[start_idx:]
         print(compP)
+        compP -= compP[0]
+        compP = chirality * compP[::chirality]
+        print(compP)
+        #compP = compP[::chirality][start_idx:][::chirality]
+        #compP -= compP[::chirality][0]
         compR = compR[::chirality][start_idx:][::chirality]
         print(compR)
 
