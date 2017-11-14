@@ -30,7 +30,8 @@ class Calibrator:
                 src = np.load(fn_npy)
                 # src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
         else:
-            src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
+            # src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
+            src = np.load(fn_npy)
 
         src = np.rot90(src)
         # print('Image loaded in', str(round(time.time() - t0, 2)), 's')

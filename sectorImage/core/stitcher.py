@@ -401,5 +401,4 @@ class Stitcher:
         im.getFeatures(lock=lock)
         # im.setFeatures(npz=npzfn)
         im.getLines()
-
         return im
