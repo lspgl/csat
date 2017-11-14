@@ -168,12 +168,18 @@ class Sequence:
         pair = Pair(env=env, electrodes=(electrode1, electrode2), serial=serial)
         return pair
 
-    def measureOffsite(self, n=16, directory='hardware/combined'):
+    def measureOffsite(self, n=16, directory1='hardware/positive', directory2='hardware/negative'):
         serial = 'RD-OFFSITE'
-        print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
-        spiral, calibration = CombinedSequence(n=n, directory=directory, env=env)
-        electrode = Electrode(serial, spiral, calibration)
-        return electrode
+        print(_C.CYAN + _C.BOLD + 'Evaluating electrode 1' + _C.ENDC)
+        spiral, calibration = CombinedSequence(n=n, directory=directory1, env=env)
+        electrode1 = Electrode(serial, spiral, calibration)
+
+        print(_C.CYAN + _C.BOLD + 'Evaluating electrode 2' + _C.ENDC)
+        spiral, calibration = CombinedSequence(n=n, directory=directory2, env=env)
+        electrode2 = Electrode(serial, spiral, calibration)
+
+        pair = Pair(env=env, electrodes=(electrode1, electrode2), serial=serial)
+        return pair
 
     def storeSpiral(self, spiral, fn=None):
         phis, rs, scale = spiral

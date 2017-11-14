@@ -21,10 +21,14 @@ class Calibrator:
         self.fns = fns
         self.mpflag = mpflag
 
-    def computeMidpoint(self, fn, plot=False):
+    def computeMidpoint(self, fn, plot=False, lock=None):
         # t0 = time.time()
         print(_C.LIGHT + 'Calibrating image ' + _C.BOLD + fn + _C.ENDC)
-        src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
+        if lock is not None:
+            with lock:
+                src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
+        else:
+            src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
         src = np.rot90(src)
         # print('Image loaded in', str(round(time.time() - t0, 2)), 's')
         src = src.astype(np.uint8, copy=False)
@@ -104,7 +108,8 @@ class Calibrator:
         return (xc, yc, R, residu)
 
     def computeAll(self, tofile=False):
-        self.comp = Parmap(self.computeMidpoint, self.fns)
+        lock = mp.Lock()
+        self.comp = Parmap(self.computeMidpoint, self.fns, lock=lock)
         self.calibration_raw = [c[:3] for c in self.comp]
         self.calibration = self.correction()
         if tofile:

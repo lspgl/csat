@@ -17,7 +17,7 @@ __location__ = os.path.realpath(
 
 class Image:
 
-    def __init__(self, fn, calibration):
+    def __init__(self, fn, calibration, lock=None):
         """
         Image processing class
 
@@ -34,20 +34,24 @@ class Image:
         self.midpoint = calibration[self.id - 1][:-1]
         # self.midpoint = calibration[0][:-1]
         print(_C.YEL + 'Processing image ' + _C.BOLD + fn + _C.ENDC)
-        self.image = cv2.imread(self.fn, cv2.IMREAD_GRAYSCALE)
+        if lock is not None:
+            with lock:
+                print('Acquired Lock')
+                self.image = cv2.imread(self.fn, cv2.IMREAD_GRAYSCALE)
+                print('Releasing Lock')
+        else:
+            self.image = cv2.imread(self.fn, cv2.IMREAD_GRAYSCALE)
         self.image = np.rot90(self.image)
         # print('Image loaded in', str(round(time.time() - t0, 2)), 's')
         self.dimensions = np.shape(self.image)
         self.dimy, self.dimx = self.dimensions
 
-    def transformRadial(self, r, midpoint=None, plot=False):
+    def transformRadial(self, midpoint=None, plot=False):
         """
         Creates a transformed image where a sector is mapped to r/phi coordinates
 
         Parameters
         ----------
-        r: float
-            Radius relative to the recorded image within the sector is recorded
         midpoint: 2-tuple of floats, optional
             Origin of the polar coordinate system. If None is given, the calibration data from the current class instantation is taken
         plot: bool, optional
@@ -63,6 +67,7 @@ class Image:
         radii: 1D array of float
             distance scaling of rmax in the transformed image
         """
+        r = self.dimx
         if midpoint is None:
             midpoint = self.midpoint
         # t0 = time.time()

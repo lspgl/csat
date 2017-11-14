@@ -20,7 +20,7 @@ class SingleImage:
         self.fn = fn
         self.calibration = calibration
 
-    def getFeatures(self, radius=6000, resolution=None, npz=None):
+    def getFeatures(self, resolution=None, npz=None, lock=None):
         """
         Process the features of the image
 
@@ -34,9 +34,9 @@ class SingleImage:
             If True the results of the feature detection is stored in an .npz file. Default is None
 
         """
-        self.img = image.Image(self.fn, self.calibration)
+        self.img = image.Image(self.fn, self.calibration, lock=lock)
 
-        angularLines, self.angles, self.radii = self.img.transformRadial(r=radius, plot=False)
+        angularLines, self.angles, self.radii = self.img.transformRadial(plot=False)
 
         # self.coverage = self.img.thetaCovered
         # self.features, self.loss = self.img.detectFeatures(angularLines, plot=True)

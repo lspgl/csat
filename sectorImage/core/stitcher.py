@@ -8,6 +8,7 @@ from .toolkit import vectools
 from .toolkit.segment import Segment
 import matplotlib.pyplot as plt
 from matplotlib.patches import Wedge
+import multiprocessing as mp
 import sys
 import os
 
@@ -52,9 +53,9 @@ class Stitcher:
         """
         Initialize the SingleImage instances and process the images.
         """
-
+        lock = mp.Lock()
         if self.mpflag:
-            self.images = Parmap(self.singleRoutine, self.fns, self.calibration)
+            self.images = Parmap(self.singleRoutine, self.fns, self.calibration, lock)
         else:
             for fn in self.fns:
                 im = singleImage.SingleImage(fn, self.calibration)
@@ -287,7 +288,7 @@ class Stitcher:
         # Cut band start
         print(chirality)
         print(compP)
-        plott = compP[:]
+        # plott = compP[:]
 
         compP = chirality * compP[::chirality]
         print(compP)
@@ -375,7 +376,7 @@ class Stitcher:
         p = pickler.Pickler()
         p.save(self, fn)
 
-    def singleRoutine(self, fn, calibration):
+    def singleRoutine(self, fn, calibration, lock):
         """
         Image processing routine to be parallelized
 
@@ -387,7 +388,7 @@ class Stitcher:
         # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
         im = singleImage.SingleImage(fn, calibration)
         # im.getFeatures(npz=npzfn)
-        im.getFeatures()
+        im.getFeatures(lock=lock)
         # im.setFeatures(npz=npzfn)
         im.getLines()
         return im
