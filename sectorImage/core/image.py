@@ -28,6 +28,7 @@ class Image:
         """
         # t0 = time.time()
         self.fn = fn
+        self.fn_npy = self.fn.split('.')[0] + '.npy'
         self.id = int(self.fn.split('cpt')[-1].split('.')[0])
         # calibration_path = __location__ + '/../data/calibration.npy'
         # calibration = np.load(calibration_path)
@@ -36,9 +37,10 @@ class Image:
         print(_C.YEL + 'Processing image ' + _C.BOLD + fn + _C.ENDC)
         if lock is not None:
             with lock:
-                print('Acquired Lock')
-                self.image = cv2.imread(self.fn, cv2.IMREAD_GRAYSCALE)
-                print('Releasing Lock')
+                t0 = time.time()
+                self.image = np.load(self.fn_npy)
+                print('loadtime:', time.time() - t0)
+                # self.image = cv2.imread(self.fn, cv2.IMREAD_GRAYSCALE)
         else:
             self.image = cv2.imread(self.fn, cv2.IMREAD_GRAYSCALE)
         self.image = np.rot90(self.image)
@@ -84,7 +86,9 @@ class Image:
         thetaMinus_idx = int((thetaMinus + np.pi) / (2 * np.pi) * self.dimy)
 
         c = tuple(midpoint)
+
         transformed = cv2.linearPolar(self.image, c, rmax, cv2.WARP_FILL_OUTLIERS)
+
         angles = np.linspace(thetaPlus, thetaMinus, thetaMinus_idx - thetaPlus_idx, endpoint=True)
         radii = np.linspace(0, rmax, self.dimx)
 
@@ -94,12 +98,9 @@ class Image:
         transformed = transformed[thetaPlus_idx:thetaMinus_idx]
 
         # Pad the transformed image with the boundary value
-        for i, line in enumerate(transformed[:]):
-            for pt in line:
-                if pt != 0:
-                    val = pt
-                    break
-            transformed[i][transformed[i] == 0] = val
+        start_idx = np.argmax(transformed > 0, axis=1)
+        for i in range(len(transformed)):
+            transformed[i][transformed[i] == 0] = transformed[i, start_idx[i]]
 
         if plot:
             fig = plt.figure()
@@ -107,7 +108,7 @@ class Image:
             ax.imshow(transformed)
             ax.axhline(y=absoluteZero)
             ax.set_aspect('auto')
-            fig.savefig('img/out/cv2transform.png', dpi=300)
+            fig.savefig(__location__ + '/../img/out/cv2transform.png', dpi=300)
         # print('Coordinate transformation completed in ', str(round(time.time() - t0, 2)), 's')
         return transformed, angles, radii
 
@@ -118,7 +119,7 @@ class Image:
         Parameters
         ----------
         p0, p1: tuples of floats
-            two points (x,y) between which to interpolate
+            two points(x, y) between which to interpolate
         img: 2D array, optional
             source image. If none, the image specified during class instantation is used. Default is None
         interpolationOrder: int, optional
@@ -141,7 +142,7 @@ class Image:
         """
         Deprecated: Use transformRadial instead.
 
-        Creates a transformed image where a sector is mapped to r/phi coordinates
+        Creates a transformed image where a sector is mapped to r / phi coordinates
         The matrix is interpolated along the angled measurement lines
 
         Parameters
@@ -151,7 +152,7 @@ class Image:
         dr: float, optional
             Distance from edge of image to geometric center of spiral. Default is 0
         resolution: int
-            number of measurement lines. If None, the y-dimension of the image will be used
+            number of measurement lines. If None, the y - dimension of the image will be used
         interpolationOrder: int, optional
             Polynomial order of interpolation algorithm between two pixels. Default is 1
         plot: bool, optional

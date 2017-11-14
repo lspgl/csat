@@ -6,6 +6,7 @@ sys.path.append(__location__)
 
 from core.calibration import Calibrator
 from core.stitcher import Stitcher
+from core.sources import Sources
 from core.toolkit.colors import Colors as _C
 import time
 
@@ -13,6 +14,7 @@ import time
 def CombinedSequence(n, directory, env):
     t0 = time.time()
     fns = [directory + '/cpt' + str(i) + '.jpg' for i in range(1, n + 1)]
+    srcs = Sources(fns)
     c = Calibrator(fns)
     calibration = c.computeAll()
     # oscillation = c.oscillationCircle()

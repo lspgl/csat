@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import time
 
 try:
     # Try to set the start method
@@ -21,6 +22,7 @@ def fun(f, q_in, q_out, args, kwargs):
 
 
 def Parmap(f, X, *args, nprocs=mp.cpu_count(), **kwargs):
+    t0 = time.time()
     q_in = mp.Queue(1)
     q_out = mp.Queue()
     proc = [mp.Process(target=fun, args=(f, q_in, q_out, args, kwargs))
@@ -33,6 +35,7 @@ def Parmap(f, X, *args, nprocs=mp.cpu_count(), **kwargs):
     sent = [q_in.put((i, x)) for i, x in enumerate(X)]
     [q_in.put((None, None)) for _ in range(nprocs)]
     res = [q_out.get() for _ in range(len(sent))]
+
     [p.join() for p in proc]
 
     return [x for i, x in sorted(res)]

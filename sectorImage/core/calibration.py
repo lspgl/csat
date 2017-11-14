@@ -23,12 +23,15 @@ class Calibrator:
 
     def computeMidpoint(self, fn, plot=False, lock=None):
         # t0 = time.time()
+        fn_npy = fn.split('.')[0] + '.npy'
         print(_C.LIGHT + 'Calibrating image ' + _C.BOLD + fn + _C.ENDC)
         if lock is not None:
             with lock:
-                src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
+                src = np.load(fn_npy)
+                # src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
         else:
             src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
+
         src = np.rot90(src)
         # print('Image loaded in', str(round(time.time() - t0, 2)), 's')
         src = src.astype(np.uint8, copy=False)

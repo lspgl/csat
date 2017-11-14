@@ -1,16 +1,24 @@
 from . import singleImage
+
 import numpy as np
 import operator
+
 from .toolkit import pickler
 from .toolkit.parmap import Parmap
 from .toolkit.colors import Colors as _C
 from .toolkit import vectools
 from .toolkit.segment import Segment
+
 import matplotlib.pyplot as plt
 from matplotlib.patches import Wedge
+
 import multiprocessing as mp
+
+import cv2
+
 import sys
 import os
+import time
 
 __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -54,8 +62,10 @@ class Stitcher:
         Initialize the SingleImage instances and process the images.
         """
         lock = mp.Lock()
+
         if self.mpflag:
             self.images = Parmap(self.singleRoutine, self.fns, self.calibration, lock)
+            # self.images = Parmap(self.singleRoutine, srcs, self.calibration, lock)
         else:
             for fn in self.fns:
                 im = singleImage.SingleImage(fn, self.calibration)
@@ -391,4 +401,5 @@ class Stitcher:
         im.getFeatures(lock=lock)
         # im.setFeatures(npz=npzfn)
         im.getLines()
+
         return im

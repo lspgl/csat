@@ -3,6 +3,7 @@ from . import linewalker
 from . import lineParser as lp
 from . import midpoints
 import numpy as np
+import time
 
 
 class SingleImage:
@@ -35,14 +36,9 @@ class SingleImage:
 
         """
         self.img = image.Image(self.fn, self.calibration, lock=lock)
-
         angularLines, self.angles, self.radii = self.img.transformRadial(plot=False)
-
-        # self.coverage = self.img.thetaCovered
-        # self.features, self.loss = self.img.detectFeatures(angularLines, plot=True)
         self.features, self.start = self.img.detectFeatures(angularLines, plot=False)
 
-        # self.angles = self.angles[int(self.loss / 2):int(-self.loss / 2)]
         if npz is not None:
             print('Storing Features in', npz)
             np.savez(npz, f=self.features, a=self.angles)
