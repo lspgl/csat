@@ -100,27 +100,13 @@ class Stitcher:
         figg = plt.figure()
         axx = figg.add_subplot(111)
         for i, image in enumerate(self.images[::-1]):
-            # stepsize_angles = (image.angles[-1] - image.angles[0]) / len(image.angles)
-            # stepsize_radii = (image.radii[-1] - image.radii[0]) / len(image.radii)
-
             if image.start[1] > ampstart:
-                # rstart = image.start[0][1] * stepsize_radii
-                # pstart = (image.start[0][0] * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
                 pstart = image.angles[image.start[0][0]] + (i * 2 * np.pi / len(self.fns))
-
                 ampstart = image.start[1]
-                print(image.start)
-                print(ampstart)
             for j, coord in enumerate(zip(image.r, image.phi)):
                 rs, phis = coord
-                if phis[0] > phis[-1]:
-                    phis = phis[::-1]
-                    rs = rs[::-1]
-                # phis = (np.array(phis) * stepsize_angles) + image.angles[0] + (i * 2 * np.pi / len(self.fns))
-                axx.plot(phis)
+                axx.plot(rs)
                 phis = image.angles[np.array(phis)] + (i * 2 * np.pi / len(self.fns))
-
-                #rs = (np.array(rs) * stepsize_radii) + image.radii[0]
                 rs = image.radii[np.array(rs)]
                 s = (phis, rs, i, j)
                 segments.append(s)
@@ -155,6 +141,7 @@ class Stitcher:
         parametrized: 3-tuple
             2 lists of angles and radii of the parametrized spiral followed by the calibrated relationship between pixels and mm
         """
+        plot = True
         segments = [Segment(*coords, identity=i) for i, coords in enumerate(segments)]
         # Calibration piece
         calib_rs = np.empty(0)
@@ -174,7 +161,7 @@ class Stitcher:
 
         scale = calib_size_mm / calib_size_px
 
-        print('Resolution: ' + str(round(scale * 1000, 2)) + ' um/px')
+        print(_C.BOLD + _C.CYAN + 'Resolution: ' + str(round(scale * 1000, 2)) + ' um/px' + _C.ENDC)
 
         calibrationCutoff = (calib_size_mm - calib_width_mm) / scale
         pitch = pitch_mm / scale
@@ -205,7 +192,7 @@ class Stitcher:
                 # sortedPt = sorted(candidates_lp, key=lambda x: vectools.pointdistPolar(x, ep))
                 nearestPt = min(candidates_lp, key=lambda x: abs(x[1] - ep[1]))
                 if abs(nearestPt[1] - ep[1]) > 0.25 * pitch:
-                    print('breaking left')
+                    print(_C.BLUE + 'Breaking left' + _C.ENDC)
                     Lbreak += 1
                     if Lbreak > 1:
                         skipFlag = True
@@ -243,7 +230,7 @@ class Stitcher:
                 candidates_ep = [c.ep for c in candidates]
                 nearestPt = min(candidates_ep, key=lambda x: abs(x[1] - lp[1]))
                 if abs(nearestPt[1] - lp[1]) > 0.25 * pitch:
-                    print('breaking')
+                    print(_C.BLUE + 'Breaking right' + _C.ENDC)
                     Rbreak += 1
                     if Rbreak > 1:
                         skipFlag = True
@@ -264,8 +251,8 @@ class Stitcher:
                 bandP = bandP[order]
                 bands.append([bandP, bandR])
         if len(segments) != len(connected_ids):
-            print(len(segments))
-            print(len(connected_ids))
+            print(_C.RED + str(len(segments) - len(connected_ids)) + ' disconncted segments (' +
+                  str(len(connected_ids)) + '/' + str(len(segments)) + ')' + _C.ENDC)
             #  raise Exception('Disconnected segments')
 
         avgR = [np.mean(b[1]) for b in bands]
@@ -287,7 +274,6 @@ class Stitcher:
             compR = np.empty(0)
             chirality *= -1
             for i, b in enumerate(bands):
-                print(len(b[0]))
                 compR = np.append(compR, b[1])
                 phi = b[0] + i * chirality * 2 * np.pi
                 compP = np.append(compP, phi)

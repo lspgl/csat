@@ -44,11 +44,11 @@ class Walker:
 
         # t0 = time.time()
         t_skeleton = np.flipud(self.skeleton)
+
         t_coords, t_launchpoints, t_endpoints, t_terminations = self.scan(
             t_skeleton, maxwidth=maxwidth)
-        # print('Scan time Bottom:', str(round(time.time() - t0, 2)), 's')
-        ud_coords = [[[self.skeleton.shape[0] - 1 - tc[0], tc[1]] for tc in t_coord] for t_coord in t_coords]
-        # ud_launchpoints = [[self.skeleton.shape[0] - 1 - lp[0], lp[1]] for lp in t_launchpoints]
+
+        ud_coords = [[[self.skeleton.shape[0] - 1 - tc[0], tc[1]] for tc in t_coord][::-1] for t_coord in t_coords]
         ud_endpoints = [[self.skeleton.shape[0] - 1 - ep[0], ep[1]] for ep in t_endpoints]
         for i, p in enumerate(ud_endpoints):
             p_ext = [[p[0], p[1] + width] for width in range(-maxwidth // 2, maxwidth // 2)]
@@ -58,7 +58,7 @@ class Walker:
                 launchpoints.append(ud_endpoints[i])
 
         r, phi = self.splitCoords(coords)
-        # TODO: Coords need to be sorted after insertion of an UD band
+        # print([p[0] for p in phi])
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111)

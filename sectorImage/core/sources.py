@@ -1,6 +1,7 @@
 import cv2
 import time
 import numpy as np
+from .toolkit.colors import Colors as _C
 
 
 class Sources:
@@ -12,4 +13,4 @@ class Sources:
         for src in self.srcs:
             fn = src[0].split('.')[0] + '.npy'
             np.save(fn, src[1])
-        print('File preparation:', time.time() - t0)
+        print(_C.CYAN + 'File preparation: ' + str(round(time.time() - t0, 2)) + _C.ENDC)
