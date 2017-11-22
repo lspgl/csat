@@ -21,9 +21,9 @@ def fun(f, q_in, q_out, args, kwargs):
         q_out.put((i, f(x, *args, **kwargs)))
 
 
-def Parmap(f, X, *args, nprocs=mp.cpu_count(), **kwargs):
+def Parmap(f, X, *args, **kwargs):
     t0 = time.time()
-    nprocs = 8
+    nprocs = min(mp.cpu_count(), 8)
     q_in = mp.Queue(1)
     q_out = mp.Queue()
     proc = [mp.Process(target=fun, args=(f, q_in, q_out, args, kwargs))
