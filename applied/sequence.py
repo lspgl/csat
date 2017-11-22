@@ -187,6 +187,17 @@ class Sequence:
         pair = Pair(env=env, electrodes=(electrode1, electrode2), serial=serial)
         return pair
 
+    def calib_iter(self, n, n_iter):
+        CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
+        print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
+        CalibrationSequence(n=n, directory='hardware/combined', iteration=n_iter)
+
+    def shuffle(self):
+        import random
+        nsteps = random.uniform(100, 1600)
+        self.stp.stepper.set_steps(nsteps)
+        time.sleep(2)
+
     def storeSpiral(self, spiral, fn=None):
         phis, rs, scale = spiral
         t = datetime.datetime.now()

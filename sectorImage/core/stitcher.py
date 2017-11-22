@@ -96,24 +96,27 @@ class Stitcher:
             ax = fig.add_subplot(111)
 
         segments = []
+
         ampstart = 0
         figg = plt.figure()
         axx = figg.add_subplot(111)
         for i, image in enumerate(self.images[::-1]):
             if image.start[1] > ampstart:
                 pstart = image.angles[image.start[0][0]] + (i * 2 * np.pi / len(self.fns))
+                #pstart = image.angles[image.start[0][0]] + dt[i]
                 ampstart = image.start[1]
             for j, coord in enumerate(zip(image.r, image.phi)):
                 rs, phis = coord
                 axx.plot(rs)
                 phis = image.angles[np.array(phis)] + (i * 2 * np.pi / len(self.fns))
+                #phis = image.angles[np.array(phis)] + dt[i]
                 rs = image.radii[np.array(rs)]
                 s = (phis, rs, i, j)
                 segments.append(s)
                 if plot:
                     ax.plot(phis, rs, lw=0.5)
             # segments.append(img_segs)
-        self.startAngle = pstart
+        self.startAngle = (2 * np.pi) - pstart
         figg.savefig(__location__ + '/../img/out/debug.png', dpi=300)
         if plot:
             ax.set_xlabel('Angle [rad]')
@@ -279,36 +282,26 @@ class Stitcher:
                 compP = np.append(compP, phi)
             order = np.argsort(compP)
             compP = compP[order]
-
+        scale = 1
         compR = compR[order] * scale
-        # Cut band start
-        print(chirality)
-        print(compP)
-        # plott = compP[:]
-
         compP = chirality * compP[::chirality]
-        print(compP)
+        if self.startAngle > compP[0] + (2 * np.pi):
+            print('Underturning Start Angle')
+            self.startAngle -= 2 * np.pi
         start_idx = np.argmax(compP > self.startAngle)
+
         if start_idx == 0:
             print('Unraveling Start Angle')
             self.startAngle += 2 * np.pi
             start_idx = np.argmax(compP > self.startAngle)
-        print(start_idx)
-        print(compP[start_idx - 1:start_idx + 2])
-        print(self.startAngle)
+
         compP = compP[start_idx:]
-        print(compP)
         compP -= compP[0]
         compP = chirality * compP[::chirality]
-        print(compP)
-        #compP = compP[::chirality][start_idx:][::chirality]
-        #compP -= compP[::chirality][0]
         compR = compR[::chirality][start_idx:][::chirality]
-        print(compR)
 
         compX = compR * np.cos(compP)
         compY = compR * np.sin(compP)
-
         if plot:
             figPolar = plt.figure()
             figCart = plt.figure()

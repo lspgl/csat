@@ -14,13 +14,12 @@ import time
 def CombinedSequence(n, directory, env):
     t0 = time.time()
     fns = [directory + '/cpt' + str(i) + '.jpg' for i in range(1, n + 1)]
-    # Sources(fns)
+    Sources(fns)
     t1 = time.time()
     c = Calibrator(fns)
     calibration = c.computeAll()
-    # oscillation = c.oscillationCircle()
-    # print(oscillation)
-    # c.plotCalibration()
+    oscillation, calibrationNew = c.oscillationCircle()
+    c.plotCalibration()
     print(_C.BOLD + _C.CYAN + 'Calibration completed in ' + str(round(time.time() - t1, 2)) + 's' + _C.ENDC)
     t2 = time.time()
     s = Stitcher(fns, calibration=calibration, mpflag=True, env=env)

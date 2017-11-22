@@ -147,15 +147,19 @@ class Image:
         # print('Convolving')
         # Convolving with Prewitt kernel in x-direction
         prewitt_kernel_x = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
-        width = 30
-        prewitt_kernel_y = np.array([[1] * width, [0] * width, [-1] * width])
+        kernel_y_width = 30
+        prewitt_kernel_y = np.array([[1] * kernel_y_width, [0] *
+                                     kernel_y_width, [-1] * kernel_y_width])
+        cv2.threshold(src=start_search, dst=start_search, thresh=100, maxval=255, type=cv2.THRESH_TOZERO)
         cv2.filter2D(src=start_search, kernel=prewitt_kernel_y, dst=start_search, ddepth=-1)
         cv2.filter2D(src=proc, kernel=prewitt_kernel_x, dst=proc, ddepth=-1)
-        np.absolute(start_search, out=start_search)
+        np.abs(start_search, out=start_search)
+        np.abs(proc, out=proc)
+
         start_amp = start_search.max()
         start_idx = np.unravel_index(start_search.argmax(), start_search.shape)
         start = (start_idx, start_amp)
-        np.abs(proc, out=proc)
+
         # print('Thresholding')
 
         # Threshold to 30% for noise reduction
@@ -194,7 +198,6 @@ class Image:
 
         # Combine foreground noise with with thresholded image
         cv2.bitwise_or(src1=proc, src2=labels, dst=proc)
-
         if plot:
             print('Plotting')
             fig = plt.figure()
