@@ -54,8 +54,11 @@ class Calibrator:
         np.abs(im, out=im)
 
         # print('Thresholding')
-        thresh = .5
-        cv2.threshold(src=im, dst=im, thresh=thresh * np.max(im), maxval=1, type=cv2.THRESH_BINARY)
+        mean_val = np.mean(im)
+        std_val = np.std(im)
+        #thresh = .5
+        thresh = mean_val + 3 * std_val
+        cv2.threshold(src=im, dst=im, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
         pt_x = [np.argmax(line > 0) for i, line in enumerate(im)]
         pt_y = np.arange(0, len(pt_x))
         border_region = 1000
