@@ -195,7 +195,7 @@ class Sequence:
     def shuffle(self):
         import random
         nsteps = random.uniform(100, 1600)
-        self.stp.stepper.set_steps(nsteps)
+        self.stp.stepper.set_steps(int(nsteps))
         time.sleep(2)
 
     def storeSpiral(self, spiral, fn=None):

@@ -6,14 +6,16 @@ sys.path.append(__location__)
 
 from sequence import Sequence
 from pair import Pair
+import time
 
 
 def main():
     n_iters = 20
     s = Sequence(offsite=False)
     s.prime()
+    time.sleep(1)
     for n_iter in range(n_iters):
-        s.calib_iter(n=16, n_iters)
+        s.calib_iter(16, n_iter)
         s.shuffle()
     s.disable()
 
