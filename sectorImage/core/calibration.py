@@ -56,12 +56,12 @@ class Calibrator:
         # print('Thresholding')
         thresh = .5
         cv2.threshold(src=im, dst=im, thresh=thresh * np.max(im), maxval=1, type=cv2.THRESH_BINARY)
-
         pt_x = [np.argmax(line > 0) for i, line in enumerate(im)]
         pt_y = np.arange(0, len(pt_x))
         border_region = 1000
         pt_y = [y for i, y in enumerate(pt_y) if pt_x[i] != 0 and pt_x[i] < border_region]
         pt_x = [x for x in pt_x if x != 0 and x < border_region]
+
         subregion_size = 10
         head = [pt_x[:subregion_size], pt_y[:subregion_size]]
         tail = [pt_x[-subregion_size:], pt_y[-subregion_size:]]
@@ -79,21 +79,21 @@ class Calibrator:
         # print('...')
         # print([xc_, yc_])
         # print([xc, yc])
-        """
+        plot = True
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            circle = plt.Circle((xc, yc), r, facecolor='none', lw=.5, edgecolor='red')
-            ax.scatter(xc, yc, marker='x', s=10)
+            # circle = plt.Circle((xc, yc), r, facecolor='none', lw=.5, edgecolor='red')
+            # ax.scatter(xc, yc, marker='x', s=10)
             ax.scatter(pt_x, pt_y, lw=.1, color='orange', marker='o', s=.2)
             ax.scatter(pt3_x, pt3_y, lw=.1, color='green', marker='o', s=1)
             ax.imshow(im)
             # ax.set_xlim(280, border_region)
             ax.set_aspect('auto')
-            ax.add_artist(circle)
+            # ax.add_artist(circle)
             fig.savefig(__location__ + '/../img/out/calibration_new_' +
                         fn.split('.')[0].split('/')[-1] + '.png', dpi=300)
-        """
+
         # return [xc, yc, r, pt3_x, pt3_y]
         return [pt3_x, pt3_y]
 
