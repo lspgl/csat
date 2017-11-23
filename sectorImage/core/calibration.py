@@ -156,8 +156,6 @@ class Calibrator:
             calibration_i = [xc, yc, R]
             calibration.append(calibration_i)
             Rs.append(R)
-
-        print(calibration)
         return calibration
 
     def leastsq_circle(self, x, y, w=1, fixedR=None):
@@ -177,7 +175,6 @@ class Calibrator:
         lock = mp.Lock()
         self.comp = Parmap(self.computeMidpoint, self.fns, lock=lock)
         self.calibration = self.leastsq_circle_multivariate(self.comp)
-        print(self.calibration)
         # self.calibration = [c[:3] for c in self.comp]
         # self.calibration = self.correction()
         if tofile:
@@ -191,39 +188,52 @@ class Calibrator:
     def oscillationCircle(self):
         mps = [np.array([x[0], x[1]]) for x in self.calibration]
         ravg = np.mean(np.array([x[2] for x in self.calibration]))
+        radii = np.array([x[2] for x in self.calibration])
         x, y, r, res = self.leastsq_circle(*zip(*mps))
         mp = np.array([x, y])
-        # thetas = [math.atan2(*(np.flipud(mpi - mp))) for mpi in mps]
-        thetas = np.zeros(len(mps))
-        for i, mpi in enumerate(mps):
-            theta = math.atan2(*(np.flipud(mpi - mp)))
-            if theta < 0:
-                theta += 2 * np.pi
-            thetas[i] = theta
+        mps_zero = mps - mp
+        mps_radial = np.array([np.array([np.sqrt(pt[0]**2 + pt[1]**2), np.arctan2(pt[1], pt[0])]) for pt in mps_zero])
+        rs = mps_radial[:, 0]
+        dr = r - rs
+        dr_true = np.argwhere(np.abs(dr) < 1).flatten()
+        mps_true = np.array(mps)[dr_true]
+        radii_true = radii[dr_true]
+        mps_true_radial = mps_radial[dr_true]
+        spacing = 2 * np.pi / len(mps)
+        dt = [t[1] - mps_true_radial[i + 1][1] for i, t in enumerate(mps_true_radial[:-1])]
 
-        thetas_equal = np.linspace(0, 2 * np.pi, num=len(mps), endpoint=True)
-        dt = thetas - thetas_equal
-        dt_avg = np.zeros(len(mps))
+        support = np.array([n * spacing for n in dr_true])
+        # print(support)
+        guess = mps_true_radial[0, 1] - support[0]
+        opt = optimize.least_squares(self.arrayDistance, guess, args=(mps_true_radial[:, 1], support))['x']
+        # print(opt)
+        opt_support = support + opt
+        opt_support[opt_support > np.pi] -= 2 * np.pi
+        opt_support[opt_support < -np.pi] += 2 * np.pi
+
+        complete_support = np.zeros(len(mps))
+        refpoint = opt_support[0]
+        refindex = dr_true[0]
+        zeropoint = refpoint - refindex * spacing
         for i in range(len(mps)):
-            shifted = np.roll(thetas_equal, i)
-            dt = np.abs(thetas - shifted)
-            for j, d in enumerate(dt[:]):
-                if d > np.pi:
-                    dt[j] -= 2 * np.pi
-                    dt[j] = abs(dt[j])
-            dt_avg[i] = np.mean(np.square(dt))
-        best_thetas_shifted = np.roll(thetas_equal, np.argmin(dt_avg))
-        opt = optimize.least_squares(self.arrayDistance, 0, args=(thetas, best_thetas_shifted))['x']
-        optshift = best_thetas_shifted + opt[0]
+            complete_support[i] = i * spacing + zeropoint
+        complete_support[complete_support > np.pi] -= 2 * np.pi
+        complete_support[complete_support < -np.pi] += 2 * np.pi
+
+        true_radius_osc = np.mean(mps_true_radial[:, 0])
+        true_radius_cal = np.mean(radii_true)
+        support_cart = np.array([np.array([true_radius_osc * np.cos(phi), true_radius_osc * np.sin(phi)])
+                                 for phi in complete_support])
+        support_cart += mp
 
         newCalib = []
-
         for i in range(len(mps)):
-            xnew = x + np.cos(thetas[i]) * r
-            ynew = y + np.sin(thetas[i]) * r
-            newCalib.append([xnew, ynew, ravg])
+            xnew, ynew = support_cart[i]
+            newCalib.append([xnew, ynew, true_radius_cal])
 
-        circle_fit = plt.Circle((x, y), r, lw=1, facecolor='none', edgecolor='red')
+        self.newCalib = newCalib
+
+        # circle_fit = plt.Circle((x, y), r, lw=1, facecolor='none', edgecolor='red')
 
         x0 = mps[0][0]
         y0 = mps[0][1]
@@ -238,7 +248,11 @@ class Calibrator:
         return oscillation, newCalib
 
     def arrayDistance(self, shift, data, equal):
-        distances = data - (equal + shift)
+        shifted = equal + shift
+        while not all(abs(i) < np.pi for i in shifted):
+            shifted[shifted > np.pi] -= 2 * np.pi
+            shifted[shifted < -np.pi] += 2 * np.pi
+        distances = data - shifted
         return distances
 
     def plotCalibration(self, fn=None):
@@ -255,7 +269,10 @@ class Calibrator:
         for i, mpt in enumerate(mps):
             circle = plt.Circle((mpt[0], mpt[1]), np.abs(mr - radii[i]) / 5, lw=1, alpha=0.3)
             ax.add_artist(circle)
+
         ax.plot(*zip(*mps), marker='x')
+        mps_new = mps = [[x[0], x[1]] for x in self.newCalib]
+        ax.plot(*zip(*mps_new), marker='x')
 
         ax.set_aspect(1)
         if fn is None:
