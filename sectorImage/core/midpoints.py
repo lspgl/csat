@@ -156,6 +156,7 @@ class Walker:
         terminations = []
         bands_scanned = 0
         outruns = 0
+        maxdrops = 10
 
         while head[1] < skeleton.shape[1] - 1:
             current = []
@@ -185,9 +186,10 @@ class Walker:
                         high = False
 
                 if edges > 1:
-                    # print('line split termination at', head)
-                    terminations.append(head[:])
-                    break
+                    #print('line split termination at', head)
+                    # terminations.append(head[:])
+                    pass
+                    # break
                 # Start by scanning to the right
                 parity = 1
                 head_ref = head[1]
@@ -203,7 +205,7 @@ class Walker:
                 if n == maxwidth:
                     head[1] = head_ref
                     termination += 1
-                    if termination == 1:
+                    if termination == maxdrops:
                         # print('line outrun termination at ', head)
                         terminations.append(head[:])
                         break

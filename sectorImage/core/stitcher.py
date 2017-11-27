@@ -147,6 +147,7 @@ class Stitcher:
         plot = True
         segments = [Segment(*coords, identity=i) for i, coords in enumerate(segments)]
         # Calibration piece
+        """
         calib_rs = np.empty(0)
         calib_phis = np.empty(0)
         for i in range(len(self.fns)):
@@ -154,7 +155,9 @@ class Stitcher:
             calib_seg = max(img_segs, key=operator.attrgetter('bandNum'))
             calib_rs = np.append(calib_rs, calib_seg.rs)
             calib_phis = np.append(calib_phis, calib_seg.phis)
-        calib_size_px = np.mean(calib_rs)
+        calib_size_px = np.mean(calib_rs)"""
+
+        calib_size_px = np.mean(np.array([x[2] for x in self.calibration]))
 
         # Dimensions of the calibration piece
         calib_size_mm = self.env.calib_size_mm  # Outer radius of calibration piece
@@ -282,7 +285,7 @@ class Stitcher:
                 compP = np.append(compP, phi)
             order = np.argsort(compP)
             compP = compP[order]
-        scale = 1
+        # scale = 1
         compR = compR[order] * scale
         compP = chirality * compP[::chirality]
         if self.startAngle > compP[0] + (2 * np.pi):

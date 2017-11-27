@@ -163,9 +163,12 @@ class Image:
         # print('Thresholding')
 
         # Threshold to 30% for noise reduction
-        proc *= proc * (1.0 / proc.max())
-        thresh = 0.7
-        thresh = 0.15
+        #proc *= proc * (1.0 / proc.max())
+        # proc *= (1.0 / proc.max())
+        proc_mean = np.mean(proc)
+        proc_std = np.std(proc)
+        thresh = proc_mean + 0.1 * proc_std
+        #thresh = 0.1
         cv2.threshold(src=proc, dst=proc, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
 
         # print('Morphology')
@@ -202,7 +205,7 @@ class Image:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.imshow(start_search)
+            ax.imshow(proc)
             ax.set_aspect('auto')
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')

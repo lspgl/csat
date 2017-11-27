@@ -115,12 +115,14 @@ class Stepper:
         return
 
     def continuousRotation(self, t, nTurn=2):
+        self.stepper.enable()
         totalSteps = self.normTurn * self.mode
         speed = int(totalSteps / t)
         self.stepper.set_max_velocity(speed)
         self.stepper.set_steps(totalSteps * nTurn)
         time.sleep(t * nTurn)
         self.stepper.set_max_velocity(self.vmax)
+        self.stepper.disable()
         return
 
     def IPCcallback(self, *params):

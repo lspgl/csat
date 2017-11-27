@@ -82,7 +82,6 @@ class Calibrator:
         # print('...')
         # print([xc_, yc_])
         # print([xc, yc])
-        plot = True
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111)

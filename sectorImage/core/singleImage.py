@@ -4,6 +4,7 @@ from . import lineParser as lp
 from . import midpoints
 import numpy as np
 import time
+import matplotlib.pyplot as plt
 
 
 class SingleImage:
@@ -67,6 +68,12 @@ class SingleImage:
             parametrized coordinates of the band midpoints
         """
         self.walker = midpoints.Walker(self.features)
+        """fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.imshow(self.walker.skeleton)
+        ax.set_aspect('auto')
+        figfn = self.fn.split('.')[0].split('/')[-1] + '.png'
+        fig.savefig(figfn, dpi=1200)"""
         self.r, self.phi = self.walker.walkSkeleton(plot=False, maxwidth=10,)
         return self.r, self.phi
 
