@@ -41,7 +41,7 @@ class Calibrator:
         # print('Blurring')
         im = np.empty(np.shape(src), np.uint8)
         # Gaussian Blur to remove fast features
-        cv2.GaussianBlur(src=src, ksize=(0, 5), dst=im, sigmaX=5, sigmaY=5)
+        cv2.GaussianBlur(src=src, ksize=(0, 5), dst=im, sigmaX=1, sigmaY=1)
         # cv2.equalizeHist(src=im, dst=im)
 
         # print('Convolving')
@@ -49,7 +49,10 @@ class Calibrator:
         prewitt_kernel_x = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
         # prewitt_kernel_y = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])
         im = im.astype(np.int16, copy=False)
+        cv2.threshold(src=im, dst=im, thresh=150, maxval=255, type=cv2.THRESH_TOZERO)[1]
         cv2.filter2D(src=im, kernel=prewitt_kernel_x, dst=im, ddepth=-1)
+        filtered = np.copy(im)
+
         # cv2.filter2D(src=im, kernel=prewitt_kernel_y, dst=im, ddepth=-1)
         np.abs(im, out=im)
 
@@ -66,6 +69,7 @@ class Calibrator:
         #deltas = np.sqrt(np.square(pt_x[1:] - pt_x[:-1]) + np.square(pt_y[1:] - pt_y[:-1]))
         #print(fn.split('.')[0].split('/')[-1] + ':' + str(np.max(deltas)))
 
+        """
         subregion_size = 10
         head = [pt_x[:subregion_size], pt_y[:subregion_size]]
         tail = [pt_x[-subregion_size:], pt_y[-subregion_size:]]
@@ -76,30 +80,31 @@ class Calibrator:
         ctr_avg = [np.mean(ctr[0]), np.mean(ctr[1])]
 
         pt3_x = [head_avg[0], tail_avg[0], ctr_avg[0]]
-        pt3_y = [head_avg[1], tail_avg[1], ctr_avg[1]]
+        pt3_y = [head_avg[1], tail_avg[1], ctr_avg[1]]"""
         # xc_, yc_, r, residu = self.leastsq_circle(pt_x, pt_y)
         # xc, yc, r, residu = self.leastsq_circle(pt3_x, pt3_y)
 
         # print('...')
         # print([xc_, yc_])
         # print([xc, yc])
-        #plot = True
+        # plot = True
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111)
             # circle = plt.Circle((xc, yc), r, facecolor='none', lw=.5, edgecolor='red')
             # ax.scatter(xc, yc, marker='x', s=10)
-            ax.plot(pt_x, pt_y, lw=.2, color='orange')
-            ax.scatter(pt3_x, pt3_y, lw=.1, color='green', marker='o', s=1)
-            ax.imshow(im)
+            #ax.plot(pt_x, pt_y, lw=.2, color='orange')
+            #ax.scatter(pt3_x, pt3_y, lw=.1, color='green', marker='o', s=1)
+            ax.imshow(filtered)
+            ax.set_xlim([700, 1200])
             ax.set_aspect('auto')
             # ax.add_artist(circle)
             fig.savefig(__location__ + '/../img/out/calibration_new_' +
                         fn.split('.')[0].split('/')[-1] + '.png', dpi=300)
 
         # return [xc, yc, r, pt3_x, pt3_y]
-        # return[pt_x, pt_y]
-        return [pt3_x, pt3_y]
+        return[pt_x, pt_y]
+        # return [pt3_x, pt3_y]
 
     def correction(self):
         print(_C.MAGENTA + 'Self-correcting calibration' + _C.ENDC)
@@ -191,7 +196,7 @@ class Calibrator:
 
     def oscillationCircle(self):
         mps = [np.array([x[0], x[1]]) for x in self.calibration]
-        ravg = np.mean(np.array([x[2] for x in self.calibration]))
+        # ravg = np.mean(np.array([x[2] for x in self.calibration]))
         radii = np.array([x[2] for x in self.calibration])
         x, y, r, res = self.leastsq_circle(*zip(*mps))
         mp = np.array([x, y])
@@ -200,11 +205,11 @@ class Calibrator:
         rs = mps_radial[:, 0]
         dr = r - rs
         dr_true = np.argwhere(np.abs(dr) < 1).flatten()
-        mps_true = np.array(mps)[dr_true]
+        # mps_true = np.array(mps)[dr_true]
         radii_true = radii[dr_true]
         mps_true_radial = mps_radial[dr_true]
         spacing = 2 * np.pi / len(mps)
-        dt = [t[1] - mps_true_radial[i + 1][1] for i, t in enumerate(mps_true_radial[:-1])]
+        # dt = [t[1] - mps_true_radial[i + 1][1] for i, t in enumerate(mps_true_radial[:-1])]
 
         support = np.array([n * spacing for n in dr_true])
         # print(support)
