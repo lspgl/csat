@@ -107,10 +107,12 @@ class Stitcher:
                 ampstart = image.start[1]
             for j, coord in enumerate(zip(image.r, image.phi)):
                 rs, phis = coord
-                axx.plot(rs)
+
                 phis = image.angles[np.array(phis)] + (i * 2 * np.pi / len(self.fns))
                 #phis = image.angles[np.array(phis)] + dt[i]
                 rs = image.radii[np.array(rs)]
+                axx.plot(rs, lw=0.1)
+                axx.set_ylim([6020, 6040])
                 s = (phis, rs, i, j)
                 segments.append(s)
                 if plot:

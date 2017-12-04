@@ -9,7 +9,7 @@ from pair import Pair
 
 
 def main():
-    s = Sequence(offsite=False)
+    s = Sequence(offsite=True)
     s.prime()
     pair = s.measure(n=16)
     pair.store()
