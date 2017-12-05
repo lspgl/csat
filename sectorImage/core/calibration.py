@@ -4,7 +4,15 @@ import cv2
 import time
 import math
 import matplotlib.pyplot as plt
+
 from scipy import optimize
+from scipy import odr
+from scipy import ndimage
+
+import b2ac.preprocess
+import b2ac.fit
+import b2ac.conversion
+
 import multiprocessing as mp
 from .toolkit.parmap import Parmap
 from .toolkit.colors import Colors as _C
@@ -23,7 +31,7 @@ class Calibrator:
         self.fns = fns
         self.mpflag = mpflag
 
-    def computeMidpoint(self, fn, plot=False, lock=None):
+    def computeMidpoint(self, fn, plot=False, smoothing=True, lock=None):
         # t0 = time.time()
         fn_npy = fn.split('.')[0] + '.npy'
         print(_C.LIGHT + 'Calibrating image ' + _C.BOLD + fn + _C.ENDC)
@@ -41,7 +49,8 @@ class Calibrator:
         # print('Blurring')
         im = np.empty(np.shape(src), np.uint8)
         # Gaussian Blur to remove fast features
-        cv2.GaussianBlur(src=src, ksize=(0, 5), dst=im, sigmaX=1, sigmaY=1)
+        kernelsize = 5
+        cv2.GaussianBlur(src=src, ksize=(kernelsize, kernelsize), dst=im, sigmaX=1.5, sigmaY=1.5)
         # cv2.equalizeHist(src=im, dst=im)
 
         # print('Convolving')
@@ -51,7 +60,6 @@ class Calibrator:
         im = im.astype(np.int16, copy=False)
         cv2.threshold(src=im, dst=im, thresh=150, maxval=255, type=cv2.THRESH_TOZERO)[1]
         cv2.filter2D(src=im, kernel=prewitt_kernel_x, dst=im, ddepth=-1)
-        filtered = np.copy(im)
 
         # cv2.filter2D(src=im, kernel=prewitt_kernel_y, dst=im, ddepth=-1)
         np.abs(im, out=im)
@@ -59,30 +67,27 @@ class Calibrator:
         # print('Thresholding')
         mean_val = np.mean(im)
         std_val = np.std(im)
-        #thresh = .5
+        # thresh = .5
         thresh = mean_val + 3 * std_val
         cv2.threshold(src=im, dst=im, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
         pt_x = [np.argmax(line > 0) for i, line in enumerate(im)]
         pt_y = np.arange(0, len(pt_x))
         pt_y = np.array([y for i, y in enumerate(pt_y) if pt_x[i] != 0])
         pt_x = np.array([x for x in pt_x if x != 0])
-        #deltas = np.sqrt(np.square(pt_x[1:] - pt_x[:-1]) + np.square(pt_y[1:] - pt_y[:-1]))
-        #print(fn.split('.')[0].split('/')[-1] + ':' + str(np.max(deltas)))
+        # deltas = np.sqrt(np.square(pt_x[1:] - pt_x[:-1]) + np.square(pt_y[1:] - pt_y[:-1]))
+        # print(fn.split('.')[0].split('/')[-1] + ':' + str(np.max(deltas)))
 
-        """
-        subregion_size = 10
-        head = [pt_x[:subregion_size], pt_y[:subregion_size]]
-        tail = [pt_x[-subregion_size:], pt_y[-subregion_size:]]
-        ctr = [pt_x[len(pt_x) // 2 - (subregion_size // 2):len(pt_x) // 2 + (subregion_size // 2)],
-               pt_y[len(pt_y) // 2 - (subregion_size // 2):len(pt_y) // 2 + (subregion_size // 2)]]
-        head_avg = [np.mean(head[0]), np.mean(head[1])]
-        tail_avg = [np.mean(tail[0]), np.mean(tail[1])]
-        ctr_avg = [np.mean(ctr[0]), np.mean(ctr[1])]
+        # ----------- Subsampling
+        subsampling = False
+        if subsampling:
+            subregion_size = 10
+            n_regions = 100
 
-        pt3_x = [head_avg[0], tail_avg[0], ctr_avg[0]]
-        pt3_y = [head_avg[1], tail_avg[1], ctr_avg[1]]"""
-        # xc_, yc_, r, residu = self.leastsq_circle(pt_x, pt_y)
-        # xc, yc, r, residu = self.leastsq_circle(pt3_x, pt3_y)
+            centroids = np.linspace(subregion_size // 2, len(pt_x - subregion_size // 2), num=n_regions, endpoint=True)
+            pt_x_sub = np.empty(len(centroids))
+            for i, c in enumerate(centroids):
+                region = pt_x[int(c) - subregion_size // 2:int(c) + subregion_size // 2]
+                pt_x_sub[i] = region.mean()
 
         # print('...')
         # print([xc_, yc_])
@@ -93,18 +98,43 @@ class Calibrator:
             ax = fig.add_subplot(111)
             # circle = plt.Circle((xc, yc), r, facecolor='none', lw=.5, edgecolor='red')
             # ax.scatter(xc, yc, marker='x', s=10)
-            #ax.plot(pt_x, pt_y, lw=.2, color='orange')
-            #ax.scatter(pt3_x, pt3_y, lw=.1, color='green', marker='o', s=1)
-            ax.imshow(filtered)
+            ax.plot(pt_x, pt_y, lw=.2, color='orange')
+            if subsampling:
+                ax.scatter(pt_x_sub, centroids, lw=.1, color='green', marker='o', s=1)
+            ax.imshow(im)
             ax.set_xlim([700, 1200])
             ax.set_aspect('auto')
             # ax.add_artist(circle)
             fig.savefig(__location__ + '/../img/out/calibration_new_' +
                         fn.split('.')[0].split('/')[-1] + '.png', dpi=300)
 
-        # return [xc, yc, r, pt3_x, pt3_y]
-        return[pt_x, pt_y]
-        # return [pt3_x, pt3_y]
+        if subsampling:
+            data = [pt_x_sub, centroids]
+        else:
+            data = [pt_x, pt_y]
+
+        if smoothing:
+            data = self.smoothing(data)
+
+        return data
+
+    def smoothing(self, data):
+        x, y = data
+        sigma = 11
+        filtered = ndimage.gaussian_filter1d(x, sigma)
+        filtered[:2 * sigma] = x[:2 * sigma]
+        filtered[-2 * sigma:] = x[-2 * sigma:]
+        dnew = filtered, y
+
+        plot = False
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(filtered, lw=0.5)
+            #ax.plot(x, lw=0.5)
+            # ax.set_xlim([900, 2500])
+            fig.savefig('smooting_debug.png', dpi=300)
+        return dnew
 
     def correction(self):
         print(_C.MAGENTA + 'Self-correcting calibration' + _C.ENDC)
@@ -123,6 +153,57 @@ class Calibrator:
     def calc_R(self, x, y, xc, yc):
         return np.sqrt((x - xc)**2 + (y - yc)**2)
 
+    def f_odr_multivariate(self, beta, x):
+        x_flat = [x[i * 4000:(i + 1) * 4000] for i in range(16)]
+        # delta = np.array([(d - beta[0][i])**2 + (self.grid - beta[1][i])**2 -
+        # beta[2]**2 for i, d in enumerate(x_flat)])
+        delta = np.array([np.abs(np.sqrt((d - beta[i * 2])**2 +
+                                         (self.grid - beta[i * 2 + 1]) ** 2) -
+                                 beta[-1]) for i, d in enumerate(x_flat)])
+        delta = np.ndarray.flatten(delta)
+        return delta
+
+    def calc_estimate_odr_multivariate(self, dta):
+        data = [dta.x[i * 4000:(i + 1) * 4000] for i in range(16)]
+        # data = dta.x
+        # x_m = np.empty(len(data))
+        # y_m = np.empty(len(data))
+        R_m = np.empty(len(data))
+        beta0 = np.empty(len(data) * 2 + 1)
+        for i, x in enumerate(data):
+            x_m = np.mean(x)
+            y_m = np.mean(self.grid)
+            beta0[i * 2] = x_m
+            beta0[i * 2 + 1] = y_m
+            R_m[i] = self.calc_R(x, self.grid, x_m, y_m).mean()
+        R_m_avg = np.mean(R_m)
+        beta0[-1] = R_m_avg
+        # beta0 = [x_m, y_m, R_m_avg]
+        return beta0
+
+    def optimize_odr(self, data):
+        print('Computing orthogonal distance regression')
+        self.grid = data[0][1]
+        self.grid_stack = np.array(list(self.grid) * len(data))
+        x = np.array(data)[:, 0, :].flatten()
+        lsc_data = odr.Data(x, y=1)
+        lsc_model = odr.Model(fcn=self.f_odr_multivariate,
+                              implicit=True,
+                              estimate=self.calc_estimate_odr_multivariate)
+        lsc_odr = odr.ODR(lsc_data, lsc_model)
+        lsc_out = lsc_odr.run()
+        lsc_out.pprint()
+        opt = lsc_out.beta
+
+        calibration = []
+        for i in range(len(data)):
+            xc = opt[i * 2]
+            yc = opt[i * 2 + 1]
+            r = opt[-1]
+            package = [xc, yc, r]
+            calibration.append(package)
+        return calibration
+
     def f(self, c, x, y, w=1, fixedR=None):
         Ri = self.calc_R(x, y, *c)
         if fixedR is None:
@@ -140,7 +221,7 @@ class Calibrator:
             yc = c[i * 2 + 1]
             Ri = self.calc_R(x, y, xc, yc)
             Rall = np.append(Rall, Ri)
-        delta = Rall - Rall.mean()
+        delta = Rall - np.mean(Rall)
         return delta
 
     def leastsq_circle_multivariate(self, data):
@@ -183,7 +264,11 @@ class Calibrator:
     def computeAll(self, tofile=False):
         lock = mp.Lock()
         self.comp = Parmap(self.computeMidpoint, self.fns, lock=lock)
+        for c in self.comp:
+            self.smoothing(c)
+        # self.calibration = self.optimize_odr(self.comp)
         self.calibration = self.leastsq_circle_multivariate(self.comp)
+        # print(self.calibration)
         # self.calibration = [c[:3] for c in self.comp]
         # self.calibration = self.correction()
         if tofile:
