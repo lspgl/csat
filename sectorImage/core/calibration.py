@@ -9,10 +9,6 @@ from scipy import optimize
 from scipy import odr
 from scipy import ndimage
 
-import b2ac.preprocess
-import b2ac.fit
-import b2ac.conversion
-
 import multiprocessing as mp
 from .toolkit.parmap import Parmap
 from .toolkit.colors import Colors as _C

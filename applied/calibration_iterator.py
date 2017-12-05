@@ -16,7 +16,7 @@ def main():
     time.sleep(1)
     for n_iter in range(n_iters):
         s.calib_iter(16, n_iter)
-        s.shuffle()
+        # s.shuffle()
     s.disable()
 
 
