@@ -27,16 +27,14 @@ class Calibrator:
         self.fns = fns
         self.mpflag = mpflag
 
-    def computeMidpoint(self, fn, plot=False, smoothing=True, lock=None):
+    def computeMidpoint(self, fn, plot=False, smoothing=True, subsampling=False, lock=None):
         # t0 = time.time()
         fn_npy = fn.split('.')[0] + '.npy'
         print(_C.LIGHT + 'Calibrating image ' + _C.BOLD + fn + _C.ENDC)
         if lock is not None:
             with lock:
                 src = np.load(fn_npy)
-                # src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
         else:
-            # src = cv2.imread(fn, cv2.IMREAD_GRAYSCALE)
             src = np.load(fn_npy)
 
         src = np.rot90(src)
@@ -47,48 +45,42 @@ class Calibrator:
         # Gaussian Blur to remove fast features
         kernelsize = 5
         cv2.GaussianBlur(src=src, ksize=(kernelsize, kernelsize), dst=im, sigmaX=1.5, sigmaY=1.5)
-        # cv2.equalizeHist(src=im, dst=im)
-        # plott = np.copy(im)
 
         # print('Convolving')
         # Convolving with kernel
         prewitt_kernel_x = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
-        # prewitt_kernel_y = np.array([[1, 1, 1], [0, 0, 0], [-1, -1, -1]])
         im = im.astype(np.int16, copy=False)
         cv2.threshold(src=im, dst=im, thresh=150, maxval=255, type=cv2.THRESH_TOZERO)[1]
         cv2.filter2D(src=im, kernel=prewitt_kernel_x, dst=im, ddepth=-1)
-
-        # cv2.filter2D(src=im, kernel=prewitt_kernel_y, dst=im, ddepth=-1)
         np.abs(im, out=im)
 
         # print('Thresholding')
         mean_val = np.mean(im)
         std_val = np.std(im)
-        # thresh = .5
         thresh = mean_val + 3 * std_val
         cv2.threshold(src=im, dst=im, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
         pt_x = [np.argmax(line > 0) for i, line in enumerate(im)]
         pt_y = np.arange(0, len(pt_x))
         pt_y = np.array([y for i, y in enumerate(pt_y) if pt_x[i] != 0])
         pt_x = np.array([x for x in pt_x if x != 0])
-        # deltas = np.sqrt(np.square(pt_x[1:] - pt_x[:-1]) + np.square(pt_y[1:] - pt_y[:-1]))
-        # print(fn.split('.')[0].split('/')[-1] + ':' + str(np.max(deltas)))
 
-        # ----------- Subsampling
-        subsampling = False
         if subsampling:
             subregion_size = 10
             n_regions = 100
+            pt_x_sub, centroids = self.subsampling(pt_x, subregion_size, n_regions)
 
-            centroids = np.linspace(subregion_size // 2, len(pt_x - subregion_size // 2), num=n_regions, endpoint=True)
-            pt_x_sub = np.empty(len(centroids))
-            for i, c in enumerate(centroids):
-                region = pt_x[int(c) - subregion_size // 2:int(c) + subregion_size // 2]
-                pt_x_sub[i] = region.mean()
-
-        # print('...')
-        # print([xc_, yc_])
-        # print([xc, yc])
+        # plot = True
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(pt_x, pt_y, lw=.2, color='orange')
+            if subsampling:
+                ax.scatter(pt_x_sub, centroids, lw=.1, color='green', marker='o', s=1)
+            ax.imshow(im)
+            ax.set_xlim([700, 1200])
+            ax.set_aspect('auto')
+            fig.savefig(__location__ + '/../img/out/calibration_new_' +
+                        fn.split('.')[0].split('/')[-1] + '.png', dpi=300)
 
         if subsampling:
             data = [pt_x_sub, centroids]
@@ -96,29 +88,22 @@ class Calibrator:
             data = [pt_x, pt_y]
 
         if smoothing:
-            data = self.smoothing(data)
-
-        plot = True
-        if plot:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            # circle = plt.Circle((xc, yc), r, facecolor='none', lw=.5, edgecolor='red')
-            # ax.scatter(xc, yc, marker='x', s=10)
-            ax.plot(*data, lw=.2, color='orange')
-            # if subsampling:
-            #    ax.scatter(pt_x_sub, centroids, lw=.1, color='green', marker='o', s=1)
-            ax.imshow(src)
-            ax.set_xlim([700, 1200])
-            ax.set_aspect('auto')
-            # ax.add_artist(circle)
-            fig.savefig(__location__ + '/../img/out/calibration_new_' +
-                        fn.split('.')[0].split('/')[-1] + '.png', dpi=300)
+            sigma = 11
+            data = self.smoothing(data, sigma)
 
         return data
 
-    def smoothing(self, data):
+    def subsampling(self, x, n, size):
+        centroids = np.linspace(size // 2, len(x - size // 2), num=n, endpoint=True)
+        x_sub = np.empty(len(centroids))
+        for i, c in enumerate(centroids):
+            region = x[int(c) - size // 2:int(c) + size // 2]
+            x_sub[i] = region.mean()
+
+        return (x_sub, centroids)
+
+    def smoothing(self, data, sigma):
         x, y = data
-        sigma = 11
         filtered = ndimage.gaussian_filter1d(x, sigma)
         filtered[:2 * sigma] = x[:2 * sigma]
         filtered[-2 * sigma:] = x[-2 * sigma:]
