@@ -48,6 +48,7 @@ class Calibrator:
         kernelsize = 5
         cv2.GaussianBlur(src=src, ksize=(kernelsize, kernelsize), dst=im, sigmaX=1.5, sigmaY=1.5)
         # cv2.equalizeHist(src=im, dst=im)
+        # plott = np.copy(im)
 
         # print('Convolving')
         # Convolving with kernel
@@ -88,21 +89,6 @@ class Calibrator:
         # print('...')
         # print([xc_, yc_])
         # print([xc, yc])
-        # plot = True
-        if plot:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            # circle = plt.Circle((xc, yc), r, facecolor='none', lw=.5, edgecolor='red')
-            # ax.scatter(xc, yc, marker='x', s=10)
-            ax.plot(pt_x, pt_y, lw=.2, color='orange')
-            if subsampling:
-                ax.scatter(pt_x_sub, centroids, lw=.1, color='green', marker='o', s=1)
-            ax.imshow(im)
-            ax.set_xlim([700, 1200])
-            ax.set_aspect('auto')
-            # ax.add_artist(circle)
-            fig.savefig(__location__ + '/../img/out/calibration_new_' +
-                        fn.split('.')[0].split('/')[-1] + '.png', dpi=300)
 
         if subsampling:
             data = [pt_x_sub, centroids]
@@ -111,6 +97,22 @@ class Calibrator:
 
         if smoothing:
             data = self.smoothing(data)
+
+        plot = True
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            # circle = plt.Circle((xc, yc), r, facecolor='none', lw=.5, edgecolor='red')
+            # ax.scatter(xc, yc, marker='x', s=10)
+            ax.plot(*data, lw=.2, color='orange')
+            # if subsampling:
+            #    ax.scatter(pt_x_sub, centroids, lw=.1, color='green', marker='o', s=1)
+            ax.imshow(src)
+            ax.set_xlim([700, 1200])
+            ax.set_aspect('auto')
+            # ax.add_artist(circle)
+            fig.savefig(__location__ + '/../img/out/calibration_new_' +
+                        fn.split('.')[0].split('/')[-1] + '.png', dpi=300)
 
         return data
 
