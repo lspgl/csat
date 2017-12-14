@@ -179,7 +179,7 @@ class Sequence:
         print(_C.CYAN + _C.BOLD + 'Evaluating electrode 1' + _C.ENDC)
         spiral, calibration = CombinedSequence(n=n, directory=directory1, env=env)
         electrode1 = Electrode(serial, spiral, calibration)
-        sys.exit()
+        # sys.exit()
         print(_C.CYAN + _C.BOLD + 'Evaluating electrode 2' + _C.ENDC)
         spiral, calibration = CombinedSequence(n=n, directory=directory2, env=env)
         electrode2 = Electrode(serial, spiral, calibration)

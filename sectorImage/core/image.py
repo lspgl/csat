@@ -30,6 +30,7 @@ class Image:
         self.fn = fn
         self.fn_npy = self.fn.split('.')[0] + '.npy'
         self.id = int(self.fn.split('cpt')[-1].split('.')[0])
+        self.calibration = calibration
         # calibration_path = __location__ + '/../data/calibration.npy'
         # calibration = np.load(calibration_path)
         self.midpoint = calibration[self.id - 1][:-1]
@@ -47,7 +48,7 @@ class Image:
         self.dimensions = np.shape(self.image)
         self.dimy, self.dimx = self.dimensions
 
-    def transformRadial(self, midpoint=None, plot=False):
+    def transformRadial(self, env=None, midpoint=None, plot=False):
         """
         Creates a transformed image where a sector is mapped to r/phi coordinates
 
@@ -81,10 +82,18 @@ class Image:
         thetaPlus = -math.asin(hplus / rmax)
         thetaMinus = math.asin(hminus / rmax)
 
+        # thetaPlus, thetaMinus = -thetaMinus, -thetaPlus
+
         thetaPlus_idx = int((thetaPlus + np.pi) / (2 * np.pi) * self.dimy)
         thetaMinus_idx = int((thetaMinus + np.pi) / (2 * np.pi) * self.dimy)
 
-        c = tuple(midpoint)
+        #c = tuple(midpoint)
+        cx, cy = midpoint
+        # TODO: Find out why there is this shift
+        shift = 100
+        cx -= shift
+
+        c = (cx, cy)
 
         transformed = cv2.linearPolar(self.image, c, rmax, cv2.WARP_FILL_OUTLIERS)
 
@@ -103,6 +112,20 @@ class Image:
         start_idx = np.argmax(transformed > 0, axis=1)
         for i in range(len(transformed)):
             transformed[i][transformed[i] == 0] = transformed[i, start_idx[i]]
+
+        # Remove Calibration features
+        calib_size_px = np.mean(np.array([x[2] for x in self.calibration]))
+        calib_size_mm = env.calib_size_mm  # Outer radius of calibration piece
+        tolerance = 1.1
+        calib_width_mm = env.calib_width_mm * tolerance  # Width of the calibration piece
+        # pitch_mm = self.env.pitch_mm  # Nominal electrode pitch
+        scale = calib_size_mm / calib_size_px
+        calibrationCutoff = (calib_size_mm - calib_width_mm) / scale * r / rmax
+        # pitch = pitch_mm / scale
+        transformed[:, int(calibrationCutoff):] = 0
+        for i in range(len(transformed)):
+            transformed[i][transformed[i] == 0] = transformed[i, int(calibrationCutoff) - 1]
+        # plot = True
 
         if plot:
             fig = plt.figure()

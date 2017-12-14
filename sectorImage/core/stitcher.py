@@ -64,7 +64,7 @@ class Stitcher:
         lock = mp.Lock()
 
         if self.mpflag:
-            self.images = Parmap(self.singleRoutine, self.fns, self.calibration, lock)
+            self.images = Parmap(self.singleRoutine, self.fns, self.calibration, self.env, lock)
             # self.images = Parmap(self.singleRoutine, srcs, self.calibration, lock)
         else:
             for fn in self.fns:
@@ -107,8 +107,8 @@ class Stitcher:
                 ampstart = image.start[1]
             for j, coord in enumerate(zip(image.r, image.phi)):
                 rs, phis = coord
-
                 phis = image.angles[np.array(phis)] + (i * 2 * np.pi / len(self.fns))
+                # phis = image.angles[np.array(phis)] + (i * (np.pi - 2.75663253596))
                 #phis = image.angles[np.array(phis)] + dt[i]
                 rs = image.radii[np.array(rs)]
                 axx.plot(rs, lw=0.1)
@@ -116,14 +116,16 @@ class Stitcher:
                 s = (phis, rs, i, j)
                 segments.append(s)
                 if plot:
-                    ax.plot(phis, rs, lw=0.5)
+                    ax.plot(phis, rs, lw=0.2)
+                    # ax.plot(rs * np.cos(phis), rs * np.sin(phis), lw=0.2)
             # segments.append(img_segs)
         self.startAngle = (2 * np.pi) - pstart
         figg.savefig(__location__ + '/../img/out/debug.png', dpi=300)
         if plot:
+            # ax.set_aspect('equal')
             ax.set_xlabel('Angle [rad]')
             ax.set_ylabel('Radius [px]')
-            fig.savefig(__location__ + '/../img/out/stitched.png', dpi=300)
+            fig.savefig(__location__ + '/../img/out/stitched.png', dpi=600)
 
         if tofile:
             np.save(__location__ + '/../data/stitched.npy', segments)
@@ -212,6 +214,7 @@ class Stitcher:
             bandR = np.empty(0)
             bandP = np.empty(0)
             if not skipFlag:
+                self.optimizeOverlap(combined)
                 for c in combined:
                     bandR = np.append(bandR, c.rs)
                     bandP = np.append(bandP, c.phis)
@@ -353,6 +356,14 @@ class Stitcher:
         parametrized = (compP, compR, scale, chirality)
         return parametrized
 
+    def optimizeOverlap(self, segments):
+        rmin = min([np.min(s.rs) for s in segments])
+        rmax = max([np.max(s.rs) for s in segments])
+        length = sum([len(s.rs) for s in segments])
+        grid = np.linspace(rmin, rmax, num=length, endpoint=True)
+        for s in segments:
+            ...
+
     def loadSegments(self, fn='stitched.npy'):
         fn = __location__ + '/../data/' + fn
         segments = np.load(fn)
@@ -370,7 +381,7 @@ class Stitcher:
         p = pickler.Pickler()
         p.save(self, fn)
 
-    def singleRoutine(self, fn, calibration, lock):
+    def singleRoutine(self, fn, calibration, env, lock):
         """
         Image processing routine to be parallelized
 
@@ -382,7 +393,7 @@ class Stitcher:
         # npzfn = 'data/' + (fn.split('/')[-1].split('.')[0]) + '.npz'
         im = singleImage.SingleImage(fn, calibration)
         # im.getFeatures(npz=npzfn)
-        im.getFeatures(lock=lock)
+        im.getFeatures(env=env, lock=lock)
         # im.setFeatures(npz=npzfn)
         im.getLines()
         return im

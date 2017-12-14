@@ -44,21 +44,33 @@ class Calibrator:
         im = np.empty(np.shape(src), np.uint8)
         # Gaussian Blur to remove fast features
         kernelsize = 5
-        cv2.GaussianBlur(src=src, ksize=(kernelsize, kernelsize), dst=im, sigmaX=1.5, sigmaY=1.5)
+        sigma = 5
+        cv2.GaussianBlur(src=src, ksize=(kernelsize, kernelsize), dst=im, sigmaX=sigma, sigmaY=sigma)
 
         # print('Convolving')
         # Convolving with kernel
-        prewitt_kernel_x = np.array([[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]])
+        kheight = 21
+        prewitt_kernel_x = np.array([[-1, 0, 1]] * kheight)
         im = im.astype(np.int16, copy=False)
-        cv2.threshold(src=im, dst=im, thresh=150, maxval=255, type=cv2.THRESH_TOZERO)[1]
+
+        # cv2.threshold(src=im, dst=im, thresh=210, maxval=255, type=cv2.THRESH_TOZERO)[1]
         cv2.filter2D(src=im, kernel=prewitt_kernel_x, dst=im, ddepth=-1)
-        np.abs(im, out=im)
+
+        # cv2.threshold(src=im, dst=im, thresh=0, maxval=255, type=cv2.THRESH_TOZERO)[1]
+        # np.abs(im, out=im)
 
         # print('Thresholding')
-        mean_val = np.mean(im)
+        # mean_val = np.mean(im)
         std_val = np.std(im)
-        thresh = mean_val + 3 * std_val
+        # thresh = mean_val + 3 * std_val
+        thresh = 2 * std_val
+        # im *= -1
+        filtered = np.copy(im)
         cv2.threshold(src=im, dst=im, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
+        morph_kernel = np.ones((5, 5), np.uint8)
+        cv2.morphologyEx(src=im, dst=im, op=cv2.MORPH_OPEN, iterations=1, kernel=morph_kernel)
+        cv2.morphologyEx(src=im, dst=im, op=cv2.MORPH_CLOSE, iterations=1, kernel=morph_kernel)
+
         pt_x = [np.argmax(line > 0) for i, line in enumerate(im)]
         pt_y = np.arange(0, len(pt_x))
         pt_y = np.array([y for i, y in enumerate(pt_y) if pt_x[i] != 0])
@@ -69,19 +81,6 @@ class Calibrator:
             n_regions = 100
             pt_x_sub, centroids = self.subsampling(pt_x, subregion_size, n_regions)
 
-        # plot = True
-        if plot:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            ax.plot(pt_x, pt_y, lw=.2, color='orange')
-            if subsampling:
-                ax.scatter(pt_x_sub, centroids, lw=.1, color='green', marker='o', s=1)
-            ax.imshow(im)
-            ax.set_xlim([700, 1200])
-            ax.set_aspect('auto')
-            fig.savefig(__location__ + '/../img/out/calibration_new_' +
-                        fn.split('.')[0].split('/')[-1] + '.png', dpi=300)
-
         if subsampling:
             data = [pt_x_sub, centroids]
         else:
@@ -91,6 +90,16 @@ class Calibrator:
             sigma = 11
             data = self.smoothing(data, sigma)
 
+        # plot = True
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(data[0], data[1], lw=.2, color='orange')
+            ax.imshow(filtered)
+            # ax.set_xlim([700, 1200])
+            ax.set_aspect('auto')
+            fig.savefig(__location__ + '/../img/out/calibration_new_' +
+                        fn.split('.')[0].split('/')[-1] + '.png', dpi=300)
         return data
 
     def subsampling(self, x, n, size):
@@ -104,7 +113,8 @@ class Calibrator:
 
     def smoothing(self, data, sigma):
         x, y = data
-        filtered = ndimage.gaussian_filter1d(x, sigma)
+        # minfiltered = ndimage.minimum_filter1d(x, sigma)
+        filtered = ndimage.gaussian_filter1d(x, sigma, mode='reflect')
         filtered[:2 * sigma] = x[:2 * sigma]
         filtered[-2 * sigma:] = x[-2 * sigma:]
         dnew = filtered, y
@@ -132,6 +142,29 @@ class Calibrator:
             xc, yc, R, residu = self.leastsq_circle(x, y, w=1, fixedR=r_mean)
             out.append([xc, yc, R])
         return out
+
+    def f_tlf(self, c, d):
+        x, y = d
+        xc, yc = c
+        dx = x - xc
+        dy = y - yc
+        rho = np.sqrt(np.square(dx) + np.square(dy))
+        # delta = rho - np.mean(rho)
+        delta = np.std(rho)
+        return delta
+
+    def transformedLineFitting(self, data):
+        calibration = []
+        for i, d in enumerate(data):
+            x, y = d
+            x_m = np.mean(x)
+            y_m = np.mean(y)
+            mp_estimate = np.array([x_m, y_m])
+            opt = optimize.least_squares(self.f_tlf, mp_estimate, args=[d], jac='2-point')
+            xc, yc = opt.x
+            r = np.mean(self.calc_R(x, y, xc, yc))
+            calibration.append([xc, yc, r])
+        return calibration
 
     def calc_R(self, x, y, xc, yc):
         return np.sqrt((x - xc)**2 + (y - yc)**2)
@@ -215,8 +248,7 @@ class Calibrator:
             y_m = np.mean(y)
             mp = np.array([x_m, y_m])
             center_estimates = np.append(center_estimates, mp)
-        opt = optimize.least_squares(self.f_multivariate, center_estimates, args=data, jac='3-point')
-
+        opt = optimize.least_squares(self.f_multivariate, center_estimates, args=data, jac='2-point')
         calibration = []
         Rs = []
         for i in range(len(opt.x) // 2):
@@ -226,9 +258,13 @@ class Calibrator:
             x, y = data[i]
             Ri = self.calc_R(x, y, *center)
             R = Ri.mean()
+
+            circle = plt.Circle((xc, yc), R, edgecolor='red', facecolor='none')
+
             calibration_i = [xc, yc, R]
             calibration.append(calibration_i)
             Rs.append(R)
+
         return calibration
 
     def leastsq_circle(self, x, y, w=1, fixedR=None):
@@ -247,10 +283,11 @@ class Calibrator:
     def computeAll(self, tofile=False):
         lock = mp.Lock()
         self.comp = Parmap(self.computeMidpoint, self.fns, lock=lock)
-        for c in self.comp:
-            self.smoothing(c)
+        # for c in self.comp:
+        #    self.smoothing(c)
         # self.calibration = self.optimize_odr(self.comp)
         self.calibration = self.leastsq_circle_multivariate(self.comp)
+        # print(self.calibration)
         # print(self.calibration)
         # self.calibration = [c[:3] for c in self.comp]
         # self.calibration = self.correction()
@@ -270,6 +307,9 @@ class Calibrator:
         mp = np.array([x, y])
         mps_zero = mps - mp
         mps_radial = np.array([np.array([np.sqrt(pt[0]**2 + pt[1]**2), np.arctan2(pt[1], pt[0])]) for pt in mps_zero])
+        thetas = mps_radial[:, 1]
+        dt = np.array([(t - thetas[i + 1]) % np.pi for i, t in enumerate(thetas[:-1])])
+        self.shiftAngle = np.mean(dt)
         rs = mps_radial[:, 0]
         dr = r - rs
         dr_true = np.argwhere(np.abs(dr) < 1).flatten()

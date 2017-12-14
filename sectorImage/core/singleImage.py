@@ -22,7 +22,7 @@ class SingleImage:
         self.fn = fn
         self.calibration = calibration
 
-    def getFeatures(self, resolution=None, npz=None, lock=None):
+    def getFeatures(self, resolution=None, npz=None, env=None, lock=None):
         """
         Process the features of the image
 
@@ -37,9 +37,8 @@ class SingleImage:
 
         """
         self.img = image.Image(self.fn, self.calibration, lock=lock)
-        angularLines, self.angles, self.radii = self.img.transformRadial(plot=False)
+        angularLines, self.angles, self.radii = self.img.transformRadial(plot=False, env=env)
         self.features, self.start = self.img.detectFeatures(angularLines, plot=False)
-
         if npz is not None:
             print('Storing Features in', npz)
             np.savez(npz, f=self.features, a=self.angles)

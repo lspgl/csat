@@ -6,6 +6,8 @@ class Segment:
     def __init__(self, phis, rs, imgNum, bandNum, identity=None):
         self.phis = phis
         self.rs = rs
+        self.xs = self.rs * np.cos(self.phis)
+        self.ys = self.rs * np.sin(self.phis)
         self.imgNum = imgNum
         self.bandNum = bandNum
         self.identity = identity

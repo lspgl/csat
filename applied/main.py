@@ -10,11 +10,11 @@ from pair import Pair
 
 def main():
     s = Sequence(offsite=True)
-    s.prime()
-    pair = s.measure(n=4)
-    pair.store()
+    # s.prime()
+    #pair = s.measure(n=16)
+    # pair.store()
     # pair.load()
-    # pair = Pair('CSAT_LabTest.h5', fromFile=True)
+    pair = Pair('CSAT_RD-OFFSITE.h5', fromFile=True)
     pair.computeGap()
     pair.plot()
     # s.storeSpiral(spiral)

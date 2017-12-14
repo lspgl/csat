@@ -17,6 +17,11 @@ class Walker:
         """
         self.image = image
         self.skeleton = self.skeletonize(self.image)
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.imshow(self.skeleton)
+        ax.set_aspect('auto')
+        fig.savefig('skeletonDebug', dpi=300)
 
     def walkSkeleton(self, plot=False, maxwidth=10):
         """
@@ -37,7 +42,6 @@ class Walker:
         """
 
         # t0 = time.time()
-
         coords, launchpoints, endpoints, terminatinos = self.scan(
             self.skeleton, maxwidth=maxwidth)
         # print('Scan time Top:', str(round(time.time() - t0, 2)), 's')
@@ -112,7 +116,7 @@ class Walker:
 
         kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
 
-        while(True):
+        while True:
             cv2.erode(img, kernel, eroded)
             cv2.dilate(eroded, kernel, temp)
             cv2.subtract(img, temp, temp)
@@ -186,7 +190,7 @@ class Walker:
                         high = False
 
                 if edges > 1:
-                    #print('line split termination at', head)
+                    # print('line split termination at', head)
                     # terminations.append(head[:])
                     pass
                     # break
