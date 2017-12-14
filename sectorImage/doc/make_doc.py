@@ -180,10 +180,12 @@ def package_contents(package_name):
                 if module.endswith(('.py'))])
 
 if __name__ == '__main__':
+    from core.calibration import Calibrator
+    from core.image import Image
     from core.midpoints import Walker
     from core.singleImage import SingleImage
-    from core.image import Image
+    from core.sources import Sources
     from core.stitcher import Stitcher
-    classes = [Walker, SingleImage, Image, Stitcher]
+    classes = [Calibrator, Image, Walker, SingleImage, Sources, Stitcher]
     entries = [makeDocPage(cl) for cl in classes]
     makeIndexPage(entries)

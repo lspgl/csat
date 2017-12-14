@@ -1,6 +1,4 @@
 from . import image
-from . import linewalker
-from . import lineParser as lp
 from . import midpoints
 import numpy as np
 import time

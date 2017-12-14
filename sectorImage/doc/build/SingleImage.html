@@ -106,7 +106,7 @@ body {
 CSAT Computer Vision<br />
 <span style='font-weight:300; font-size:20px'>SingleImage</span></div>
 <div id=docWrapper>
-<hr><span class=mod_name>SingleImage.</span><span class=func_name id=__init__>__init__</span>(self, fn)
+<hr><span class=mod_name>SingleImage.</span><span class=func_name id=__init__>__init__</span>(self, fn, calibration)
 <div class=docstring>
 Class for handling a single image
 
@@ -115,14 +115,12 @@ Class for handling a single image
 <div class=variable_desc>filename of source image
 </div></div></div>
 
-<hr><span class=mod_name>SingleImage.</span><span class=func_name id=getFeatures>getFeatures</span>(self, radius=5000, interpolationOrder=1, resolution=None, npz=None)
+<hr><span class=mod_name>SingleImage.</span><span class=func_name id=getFeatures>getFeatures</span>(self, resolution=None, npz=None, env=None, lock=None)
 <div class=docstring>
 Process the features of the image
 
 <span class=paramTitle>Parameters:</span><div class=params><span class=variable>radius</span>: <span class=type>float or int, optional</span>
 <div class=variable_desc>maximal radius which is analyzed. Depending on the midpoint this determines the maximally covered angle of the detectable region. Default is 5000
-</div><span class=variable>interpolationOrder</span>: <span class=type>int, optional</span>
-<div class=variable_desc>order of the interpolation polynom for the coordinate transform. Default is 1
 </div><span class=variable>resolution</span>: <span class=type>int, optional</span>
 <div class=variable_desc>number of pixel in an interpolation line. If None is given, the radius is taken as the size of a measurement line. Default is None
 </div><span class=variable>npz</span>: <span class=type>bool, optional</span>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+<title>CSAT</title>
+<style>@charset "utf-8";
+
+html {
+	height:100%;
+	margin:0;
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
+body {
+	background-color:#fff;
+	font-family:Roboto;
+	color:#2b2b2b;
+	margin:0px;
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
+.headlink{
+	text-decoration: None !important;
+	color: #2b2b2b;
+}
+
+#docWrapper{
+  white-space: pre-wrap;
+  margin-left:40px;
+	display: block;
+	width: auto;
+	height: auto;
+	overflow: visible;
+}
+
+#header {
+	background-color:#00695C;
+  color:#fff;
+  font-size: 30px;
+	height:120px;
+	width: 100%;
+	padding:30px 40px 0px 40px;
+  line-height:30px;
+	box-sizing: border-box;
+	box-shadow: 0px 5px 20px rgba(0,0,0,0.1);
+}
+
+.mod_name {
+	font-weight: 300;
+	font-style: italic;
+	color:#9d9d9d;
+}
+
+.func_name {
+	font-weight: 700;
+	color:#00695c;
+}
+
+.docstring {
+	margin-left:40px;
+}
+
+.paramTitle{
+	color: #00695C
+}
+
+.params{
+	margin-left:40px;
+}
+
+.variable {
+	font-weight: 700;
+}
+
+.type {
+	font-weight: 300;
+	font-style: italic;
+}
+
+.variable_desc {
+	margin-left:40px;
+}
+
+@media print {
+							 #docWrapper{
+								width: 100%;
+								height: 100%;
+								display: block;
+								width: auto;
+								height: auto;
+								overflow: visible;
+							 }
+						 }
+</style>
+
+<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i" rel="stylesheet">
+<link rel="icon"
+      type="image/x-icon"
+      href="img/favicon.ico">
+</head>
+<body>
+<div id='header'>
+CSAT Computer Vision<br />
+<span style='font-weight:300; font-size:20px'>Calibrator</span></div>
+<div id=docWrapper>
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=_Calibrator__arrayDistance>_Calibrator__arrayDistance</span>(self, shift, data, equal)
+<div class=docstring>None</div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=__init__>__init__</span>(self, fns, mpflag=True)
+<div class=docstring>
+Calibration class
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>fns</span>: <span class=type>list ofstring</span>
+<div class=variable_desc>filenames of the images to be calibrated
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=calc_R>calc_R</span>(self, x, y, xc, yc)
+<div class=docstring>
+Calculate radius for a set of points w.r.t a specified point
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>x</span>: <span class=type>float array</span>
+<div class=variable_desc>x coordinates of data points
+</div><span class=variable>y</span>: <span class=type>float array</span>
+<div class=variable_desc>y coordinates of data points
+</div><span class=variable>xc</span>: <span class=type>float</span>
+<div class=variable_desc>x coordinate of center point
+</div><span class=variable>yc</span>: <span class=type>float</span>
+<div class=variable_desc>y coordinate of center point
+</div></div>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>r</span>: <span class=type>float array</span>
+<div class=variable_desc>calculated radii for all points
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=calc_estimate_odr_multivariate>calc_estimate_odr_multivariate</span>(self, data)
+<div class=docstring>
+Calculate initial guess for orthogonal distance regression
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>data</span>: <span class=type>2D array</span>
+<div class=variable_desc>x-y coordinates of all datapoints in all images
+</div></div>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>beta0</span>: <span class=type>float array</span>
+<div class=variable_desc>1st order estimate on midpoints
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=computeAll>computeAll</span>(self, tofile=False)
+<div class=docstring>
+Compute all calibration midpoints
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>tofile</span>: <span class=type>bool, optional</span>
+<div class=variable_desc>save the calibration to file
+</div></div>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>calibration</span>: <span class=type>float array</span>
+<div class=variable_desc>array of midpoint coordinates and respective radii
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=computeOutline>computeOutline</span>(self, fn, plot=False, smoothing=True, subsampling=False, lock=None)
+<div class=docstring>
+Filter single source image to obtain a well defined edge of the calibration cirlce
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>fn</span>: <span class=type>string</span>
+<div class=variable_desc>image name to be processed
+</div><span class=variable>plot</span>: <span class=type>bool, optional</span>
+<div class=variable_desc>plot the image and the detected edge points. Default is False
+</div><span class=variable>smoothing</span>: <span class=type>bool, optional</span>
+<div class=variable_desc>smooth out the edge points to avoid errors created by dust on the calibration piece. Default is True
+</div><span class=variable>subsampling</span>: <span class=type>bool, optional</span>
+<div class=variable_desc>only use a subset of the edge points. Default is False
+</div><span class=variable>lock</span>: <span class=type>mp.Lock() object</span>
+<div class=variable_desc>will be used in multiprocessing routine
+</div></div>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>data</span>: <span class=type>2D array</span>
+<div class=variable_desc>x and y coordinate arrays for the individual edge points
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=f_multivariate>f_multivariate</span>(self, c, *args)
+<div class=docstring>
+Objective function for leqast squares regression
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>c</span>: <span class=type>float array</span>
+<div class=variable_desc>array of midpoint coordinates. Flattend over all images by alternating x-y coordinate
+</div><span class=variable>args</span>: <span class=type>2D array</span>
+<div class=variable_desc>x-y coordinates of all datapoints in all images
+</div></div>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>delta</span>: <span class=type>float array</span>
+<div class=variable_desc>values of the residuals
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=f_odr_multivariate>f_odr_multivariate</span>(self, beta, x)
+<div class=docstring>
+Objective function for multivariate orthogonal distance regression
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>beta</span>: <span class=type>float array</span>
+<div class=variable_desc>Optimization parameters
+</div><span class=variable>x</span>: <span class=type>float array</span>
+<div class=variable_desc>x-Data to be fitted
+</div></div>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>r</span>: <span class=type>float array</span>
+<div class=variable_desc>values of the residuals
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=leastsq_circle_multivariate>leastsq_circle_multivariate</span>(self, data)
+<div class=docstring>
+Calculate the least squares regression for a dataset fitted to a circle
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>data</span>: <span class=type>2D array</span>
+<div class=variable_desc>x-y coordinates of all datapoints in all images
+</div></div>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>calibration</span>: <span class=type>float array</span>
+<div class=variable_desc>array of midpoint coordinates and respective radii
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=loadCalibration>loadCalibration</span>(self, fn)
+<div class=docstring>
+Load calibration from file
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>fn</span>: <span class=type>starting</span>
+<div class=variable_desc>filename of calibration data
+</div></div>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>calibration</span>: <span class=type>float array</span>
+<div class=variable_desc>array of midpoint coordinates and respective radii
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=optimize_odr>optimize_odr</span>(self, data)
+<div class=docstring>
+Calculate the orthogonal distance regression for a dataset fitted to a circle
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>data</span>: <span class=type>2D array</span>
+<div class=variable_desc>x-y coordinates of all datapoints in all images
+</div></div>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>calibration</span>: <span class=type>float array</span>
+<div class=variable_desc>array of midpoint coordinates and respective radii
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=oscillationCircle>oscillationCircle</span>(self)
+<div class=docstring>
+Calculate oscillation of the midpoints
+
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>oscillation</span>: <span class=type>float array</span>
+<div class=variable_desc>center and radius of the oscillation circle
+</div><span class=variable>newCalib</span>: <span class=type>float array</span>
+<div class=variable_desc>array of midpoint coordinates and respective radii fitted to a perfect circle
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=plotCalibration>plotCalibration</span>(self, fn=None)
+<div class=docstring>
+Plot the result of the calibation and oscillation
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>fn</span>: <span class=type>str, optional</span>
+<div class=variable_desc>filename of the calibration trace plot
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=smoothing>smoothing</span>(self, data, sigma)
+<div class=docstring>
+Smooth out 1D dataset with a gaussian kernel
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>data</span>: <span class=type>2D array</span>
+<div class=variable_desc>x-y coordinates to be smoothed
+</div><span class=variable>sigma</span>: <span class=type>float</span>
+<div class=variable_desc>STD of the smoothing gaussian
+</div></div>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>dnew</span>: <span class=type>2D array</span>
+<div class=variable_desc>smoothed x-y coordinates
+</div></div></div>
+
+<hr><span class=mod_name>Calibrator.</span><span class=func_name id=subsampling>subsampling</span>(self, x, n, size)
+<div class=docstring>
+Subsample set of points
+
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>x</span>: <span class=type>float array</span>
+<div class=variable_desc>data points to be subsampled
+</div><span class=variable>n</span>: <span class=type>int</span>
+<div class=variable_desc>number of new points
+</div><span class=variable>size</span>: <span class=type>int</span>
+<div class=variable_desc>size of the pooling region for the subsample
+</div></div>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>x_sub</span>: <span class=type>float array</span>
+<div class=variable_desc>subsampled x
+</div><span class=variable>centroids</span>: <span class=type>float array</span>
+<div class=variable_desc>subsampled y, starting from size // 2
+</div></div></div>
+
+</div>
+</body>
+</html>
+

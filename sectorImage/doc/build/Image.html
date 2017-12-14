@@ -106,7 +106,7 @@ body {
 CSAT Computer Vision<br />
 <span style='font-weight:300; font-size:20px'>Image</span></div>
 <div id=docWrapper>
-<hr><span class=mod_name>Image.</span><span class=func_name id=__init__>__init__</span>(self, fn)
+<hr><span class=mod_name>Image.</span><span class=func_name id=__init__>__init__</span>(self, fn, calibration, lock=None)
 <div class=docstring>
 Image processing class
 
@@ -129,39 +129,22 @@ Cannot be used if multiprocessing is active
 </div><span class=type></span>
 <div class=variable_desc></div></div></div>
 
-<hr><span class=mod_name>Image.</span><span class=func_name id=lineSweep>lineSweep</span>(self, r, dr=0, resolution=None, interpolationOrder=1, plot=False)
+<hr><span class=mod_name>Image.</span><span class=func_name id=transformRadial>transformRadial</span>(self, env=None, midpoint=None, plot=False)
 <div class=docstring>
 Creates a transformed image where a sector is mapped to r/phi coordinates
-The matrix is interpolated along the angled measurement lines
 
-<span class=paramTitle>Parameters:</span><div class=params><span class=variable>r</span>: <span class=type>float</span>
-<div class=variable_desc>Radius relative to the recorded image within the sector is recorded
-</div><span class=variable>dr</span>: <span class=type>float, optional</span>
-<div class=variable_desc>Distance from edge of image to geometric center of spiral. Default is 0
-</div><span class=variable>resolution</span>: <span class=type>int</span>
-<div class=variable_desc>number of measurement lines. If None, the y-dimension of the image will be used
-</div><span class=variable>interpolationOrder</span>: <span class=type>int, optional</span>
-<div class=variable_desc>Polynomial order of interpolation algorithm between two pixels. Default is 1
+<span class=paramTitle>Parameters:</span><div class=params><span class=variable>midpoint</span>: <span class=type>2-tuple of floats, optional</span>
+<div class=variable_desc>Origin of the polar coordinate system. If None is given, the calibration data from the current class instantation is taken
 </div><span class=variable>plot</span>: <span class=type>bool, optional</span>
 <div class=variable_desc>Plot the transformed image. Default is False
 Cannot be used if multiprocessing is active
 </div></div>
-<span class=paramTitle>Returns:</span><div class=params><span class=variable>linesnew</span>: <span class=type>2D array</span>
+<span class=paramTitle>Returns:</span><div class=params><span class=variable>transformed</span>: <span class=type>2D array</span>
 <div class=variable_desc>Coordinate transformed image
 </div><span class=variable>angles</span>: <span class=type>1D array of floats</span>
-<div class=variable_desc>angles between which the image is sweeped
-</div></div></div>
-
-<hr><span class=mod_name>Image.</span><span class=func_name id=profileLine>profileLine</span>(self, p0, p1, img=None, interpolationOrder=1)
-<div class=docstring>
-Generate an interpolated profile of the image matrix between 2 points
-
-<span class=paramTitle>Parameters:</span><div class=params><span class=variable>p0, p1</span>: <span class=type>tuples of floats</span>
-<div class=variable_desc>two points (x,y) between which to interpolate
-</div><span class=variable>img</span>: <span class=type>2D array, optional</span>
-<div class=variable_desc>source image. If none, the image specified during class instantation is used. Default is None
-</div><span class=variable>interpolationOrder</span>: <span class=type>int, optional</span>
-<div class=variable_desc>order of the interpolation polynom for the coordinate transform. Default is 1
+<div class=variable_desc>angles between which the image is fully covered
+</div><span class=variable>radii</span>: <span class=type>1D array of float</span>
+<div class=variable_desc>distance scaling of rmax in the transformed image
 </div></div></div>
 
 </div>

@@ -24,10 +24,40 @@ __location__ = os.path.realpath(
 class Calibrator:
 
     def __init__(self, fns, mpflag=True):
+        """
+        Calibration class
+
+        Parameters
+        ----------
+        fns: list ofstring
+            filenames of the images to be calibrated
+        """
+
         self.fns = fns
         self.mpflag = mpflag
 
-    def computeMidpoint(self, fn, plot=False, smoothing=True, subsampling=False, lock=None):
+    def computeOutline(self, fn, plot=False, smoothing=True, subsampling=False, lock=None):
+        """
+        Filter single source image to obtain a well defined edge of the calibration cirlce
+
+        Parameters
+        ----------
+        fn: string
+            image name to be processed
+        plot: bool, optional
+            plot the image and the detected edge points. Default is False
+        smoothing: bool, optional
+            smooth out the edge points to avoid errors created by dust on the calibration piece. Default is True
+        subsampling: bool, optional
+            only use a subset of the edge points. Default is False
+        lock: mp.Lock() object
+            will be used in multiprocessing routine
+
+        Returns
+        -------
+        data: 2D array
+            x and y coordinate arrays for the individual edge points
+        """
         # t0 = time.time()
         fn_npy = fn.split('.')[0] + '.npy'
         print(_C.LIGHT + 'Calibrating image ' + _C.BOLD + fn + _C.ENDC)
@@ -103,6 +133,25 @@ class Calibrator:
         return data
 
     def subsampling(self, x, n, size):
+        """
+        Subsample set of points
+
+        Parameters
+        ----------
+        x: float array
+            data points to be subsampled
+        n: int
+            number of new points
+        size: int
+            size of the pooling region for the subsample
+
+        Returns
+        -------
+        x_sub: float array
+            subsampled x
+        centroids: float array
+            subsampled y, starting from size // 2
+        """
         centroids = np.linspace(size // 2, len(x - size // 2), num=n, endpoint=True)
         x_sub = np.empty(len(centroids))
         for i, c in enumerate(centroids):
@@ -112,6 +161,21 @@ class Calibrator:
         return (x_sub, centroids)
 
     def smoothing(self, data, sigma):
+        """
+        Smooth out 1D dataset with a gaussian kernel
+
+        Parameters
+        ----------
+        data: 2D array
+            x-y coordinates to be smoothed
+        sigma: float
+            STD of the smoothing gaussian
+
+        Returns
+        -------
+        dnew: 2D array
+            smoothed x-y coordinates
+        """
         x, y = data
         # minfiltered = ndimage.minimum_filter1d(x, sigma)
         filtered = ndimage.gaussian_filter1d(x, sigma, mode='reflect')
@@ -129,47 +193,44 @@ class Calibrator:
             fig.savefig('smooting_debug.png', dpi=300)
         return dnew
 
-    def correction(self):
-        print(_C.MAGENTA + 'Self-correcting calibration' + _C.ENDC)
-        r = [c[2] for c in self.comp]
-        r_mean = np.array(r).mean()
-        r_std = np.array(r).std()
-        print(r_std)
-        out = []
-        for c in self.comp:
-            x = c[3]
-            y = c[4]
-            xc, yc, R, residu = self.leastsq_circle(x, y, w=1, fixedR=r_mean)
-            out.append([xc, yc, R])
-        return out
-
-    def f_tlf(self, c, d):
-        x, y = d
-        xc, yc = c
-        dx = x - xc
-        dy = y - yc
-        rho = np.sqrt(np.square(dx) + np.square(dy))
-        # delta = rho - np.mean(rho)
-        delta = np.std(rho)
-        return delta
-
-    def transformedLineFitting(self, data):
-        calibration = []
-        for i, d in enumerate(data):
-            x, y = d
-            x_m = np.mean(x)
-            y_m = np.mean(y)
-            mp_estimate = np.array([x_m, y_m])
-            opt = optimize.least_squares(self.f_tlf, mp_estimate, args=[d], jac='2-point')
-            xc, yc = opt.x
-            r = np.mean(self.calc_R(x, y, xc, yc))
-            calibration.append([xc, yc, r])
-        return calibration
-
     def calc_R(self, x, y, xc, yc):
+        """
+        Calculate radius for a set of points w.r.t a specified point
+
+        Parameters
+        ----------
+        x: float array
+            x coordinates of data points
+        y: float array
+            y coordinates of data points
+        xc: float
+            x coordinate of center point
+        yc: float
+            y coordinate of center point
+
+        Returns
+        -------
+        r: float array
+            calculated radii for all points
+        """
         return np.sqrt((x - xc)**2 + (y - yc)**2)
 
     def f_odr_multivariate(self, beta, x):
+        """
+        Objective function for multivariate orthogonal distance regression
+
+        Parameters
+        ----------
+        beta: float array
+            Optimization parameters
+        x: float array
+            x-Data to be fitted
+
+        Returns
+        -------
+        r: float array
+            values of the residuals
+        """
         x_flat = [x[i * 4000:(i + 1) * 4000] for i in range(16)]
         # delta = np.array([(d - beta[0][i])**2 + (self.grid - beta[1][i])**2 -
         # beta[2]**2 for i, d in enumerate(x_flat)])
@@ -179,9 +240,22 @@ class Calibrator:
         delta = np.ndarray.flatten(delta)
         return delta
 
-    def calc_estimate_odr_multivariate(self, dta):
-        data = [dta.x[i * 4000:(i + 1) * 4000] for i in range(16)]
-        # data = dta.x
+    def calc_estimate_odr_multivariate(self, data):
+        """
+        Calculate initial guess for orthogonal distance regression
+
+        Parameters
+        ----------
+        data: 2D array
+            x-y coordinates of all datapoints in all images
+
+        Returns
+        -------
+        beta0: float array
+            1st order estimate on midpoints
+        """
+        data = [data.x[i * 4000:(i + 1) * 4000] for i in range(16)]
+        # data = data.x
         # x_m = np.empty(len(data))
         # y_m = np.empty(len(data))
         R_m = np.empty(len(data))
@@ -198,7 +272,19 @@ class Calibrator:
         return beta0
 
     def optimize_odr(self, data):
-        print('Computing orthogonal distance regression')
+        """
+        Calculate the orthogonal distance regression for a dataset fitted to a circle
+
+        Parameters
+        ----------
+        data: 2D array
+            x-y coordinates of all datapoints in all images
+
+        Returns
+        -------
+        calibration: float array
+            array of midpoint coordinates and respective radii
+        """
         self.grid = data[0][1]
         self.grid_stack = np.array(list(self.grid) * len(data))
         x = np.array(data)[:, 0, :].flatten()
@@ -220,16 +306,22 @@ class Calibrator:
             calibration.append(package)
         return calibration
 
-    def f(self, c, x, y, w=1, fixedR=None):
-        Ri = self.calc_R(x, y, *c)
-        if fixedR is None:
-            delta = Ri - Ri.mean()
-        else:
-            delta = Ri - fixedR
-        delta_w = delta * w
-        return delta_w
-
     def f_multivariate(self, c, *args):
+        """
+        Objective function for leqast squares regression
+
+        Parameters
+        ----------
+        c: float array
+            array of midpoint coordinates. Flattend over all images by alternating x-y coordinate
+        args: 2D array
+            x-y coordinates of all datapoints in all images
+
+        Returns
+        -------
+        delta: float array
+            values of the residuals
+        """
         Rall = np.empty(0)
         for i, d in enumerate(args):
             x, y = d
@@ -241,6 +333,19 @@ class Calibrator:
         return delta
 
     def leastsq_circle_multivariate(self, data):
+        """
+        Calculate the least squares regression for a dataset fitted to a circle
+
+        Parameters
+        ----------
+        data: 2D array
+            x-y coordinates of all datapoints in all images
+
+        Returns
+        -------
+        calibration: float array
+            array of midpoint coordinates and respective radii
+        """
         center_estimates = np.empty(0)
         for i, d in enumerate(data):
             x, y = d
@@ -258,48 +363,62 @@ class Calibrator:
             x, y = data[i]
             Ri = self.calc_R(x, y, *center)
             R = Ri.mean()
-
-            circle = plt.Circle((xc, yc), R, edgecolor='red', facecolor='none')
-
+            # circle = plt.Circle((xc, yc), R, edgecolor='red', facecolor='none')
             calibration_i = [xc, yc, R]
             calibration.append(calibration_i)
             Rs.append(R)
 
         return calibration
 
-    def leastsq_circle(self, x, y, w=1, fixedR=None):
-        x_m = np.mean(x)
-        y_m = np.mean(y)
-        center_estimate = x_m, y_m
-        # center, ier = optimize.leastsq(self.f, center_estimate, args=(x, y, w, fixedR))
-        opt = optimize.least_squares(self.f, center_estimate, args=(x, y, w, fixedR), jac='3-point')
-        center = opt['x']
-        xc, yc = center
-        Ri = self.calc_R(x, y, *center)
-        R = Ri.mean()
-        residu = np.sum((Ri - R)**2)
-        return (xc, yc, R, residu)
-
     def computeAll(self, tofile=False):
+        """
+        Compute all calibration midpoints
+
+        Parameters
+        ----------
+        tofile: bool, optional
+            save the calibration to file
+
+        Returns
+        -------
+        calibration: float array
+            array of midpoint coordinates and respective radii
+        """
         lock = mp.Lock()
-        self.comp = Parmap(self.computeMidpoint, self.fns, lock=lock)
-        # for c in self.comp:
-        #    self.smoothing(c)
-        # self.calibration = self.optimize_odr(self.comp)
+        self.comp = Parmap(self.computeOutline, self.fns, lock=lock)
         self.calibration = self.leastsq_circle_multivariate(self.comp)
-        # print(self.calibration)
-        # print(self.calibration)
-        # self.calibration = [c[:3] for c in self.comp]
-        # self.calibration = self.correction()
         if tofile:
             np.save(__location__ + '/../data/calibration.npy', np.array(self.calibration))
         return np.array(self.calibration)
 
     def loadCalibration(self, fn):
+        """
+        Load calibration from file
+
+        Parameters
+        ----------
+        fn: starting
+            filename of calibration data
+
+        Returns
+        -------
+        calibration: float array
+            array of midpoint coordinates and respective radii
+        """
         self.calibration = np.load(fn)
         return self.calibration
 
     def oscillationCircle(self):
+        """
+        Calculate oscillation of the midpoints
+
+        Returns
+        -------
+        oscillation: float array
+            center and radius of the oscillation circle
+        newCalib: float array
+            array of midpoint coordinates and respective radii fitted to a perfect circle
+        """
         mps = [np.array([x[0], x[1]]) for x in self.calibration]
         # ravg = np.mean(np.array([x[2] for x in self.calibration]))
         radii = np.array([x[2] for x in self.calibration])
@@ -365,6 +484,23 @@ class Calibrator:
         return oscillation, newCalib
 
     def arrayDistance(self, shift, data, equal):
+        """
+        Calculate the radial distance between two arrays
+
+        Parameters
+        ----------
+        shift: float
+            angular shift of the equalized data
+        data: float array
+            fixed data to be compared
+        equal: float array
+            equalized data to be compared
+
+        Returns
+        -------
+        distances: float array
+            distances between all points
+        """
         shifted = equal + shift
         while not all(abs(i) < np.pi for i in shifted):
             shifted[shifted > np.pi] -= 2 * np.pi
@@ -373,6 +509,14 @@ class Calibrator:
         return distances
 
     def plotCalibration(self, fn=None):
+        """
+        Plot the result of the calibation and oscillation
+
+        Parameters
+        ----------
+        fn: str, optional
+            filename of the calibration trace plot
+        """
         fig = plt.figure()
         ax = fig.add_subplot(111)
         radii = [x[2] for x in self.calibration]
