@@ -90,7 +90,7 @@ class Image:
         #c = tuple(midpoint)
         cx, cy = midpoint
         # TODO: Find out why there is this shift
-        shift = 100
+        shift = 0
         cx -= shift
 
         c = (cx, cy)
@@ -110,6 +110,8 @@ class Image:
 
         # Pad the transformed image with the boundary value
         start_idx = np.argmax(transformed > 0, axis=1)
+        start_idx = np.ones((len(transformed)), np.uint8) * 1000
+        transformed[:, :999] = 0
         for i in range(len(transformed)):
             transformed[i][transformed[i] == 0] = transformed[i, start_idx[i]]
 
@@ -125,7 +127,8 @@ class Image:
         transformed[:, int(calibrationCutoff):] = 0
         for i in range(len(transformed)):
             transformed[i][transformed[i] == 0] = transformed[i, int(calibrationCutoff) - 1]
-        # plot = True
+
+        # plot = True
 
         if plot:
             fig = plt.figure()

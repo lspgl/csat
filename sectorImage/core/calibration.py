@@ -72,19 +72,39 @@ class Calibrator:
         src = src.astype(np.uint8, copy=False)
         # print('Blurring')
         im = np.empty(np.shape(src), np.uint8)
+
+        inversionMapping = True
+        if inversionMapping:
+            # c_estimate = (src.shape[1], src.shape[0] // 2)
+            dx = 650
+            c_estimate = (src.shape[1] + dx, src.shape[0] // 2)
+            src = cv2.linearPolar(src, c_estimate, src.shape[1] + dx, cv2.WARP_FILL_OUTLIERS)
+
         # Gaussian Blur to remove fast features
         kernelsize = 5
-        sigma = 5
+        sigma = 1.0
         cv2.GaussianBlur(src=src, ksize=(kernelsize, kernelsize), dst=im, sigmaX=sigma, sigmaY=sigma)
 
         # print('Convolving')
         # Convolving with kernel
-        kheight = 21
+        kheight = 3
         prewitt_kernel_x = np.array([[-1, 0, 1]] * kheight)
-        im = im.astype(np.int16, copy=False)
 
-        # cv2.threshold(src=im, dst=im, thresh=210, maxval=255, type=cv2.THRESH_TOZERO)[1]
+        im = im.astype(np.int16, copy=False)
+        if not inversionMapping:
+            im_y = np.empty(np.shape(src), np.int16)
+            cv2.filter2D(src=im, kernel=np.transpose(prewitt_kernel_x), dst=im_y, ddepth=-1)
+
         cv2.filter2D(src=im, kernel=prewitt_kernel_x, dst=im, ddepth=-1)
+
+        if not inversionMapping:
+            scaling = np.max(im) / np.max(im_y)
+            im += (np.abs(im_y) * scaling).astype(np.int16, copy=False)
+            del im_y
+        else:
+
+            im = cv2.linearPolar(im, c_estimate, im.shape[1] + dx, cv2.WARP_INVERSE_MAP)
+            im *= -1
 
         # cv2.threshold(src=im, dst=im, thresh=0, maxval=255, type=cv2.THRESH_TOZERO)[1]
         # np.abs(im, out=im)
@@ -95,42 +115,96 @@ class Calibrator:
         # thresh = mean_val + 3 * std_val
         thresh = 2 * std_val
         # im *= -1
-        filtered = np.copy(im)
+
         cv2.threshold(src=im, dst=im, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
-        morph_kernel = np.ones((5, 5), np.uint8)
-        cv2.morphologyEx(src=im, dst=im, op=cv2.MORPH_OPEN, iterations=1, kernel=morph_kernel)
-        cv2.morphologyEx(src=im, dst=im, op=cv2.MORPH_CLOSE, iterations=1, kernel=morph_kernel)
+
+        # morph_kernel = np.ones((5, 5), np.uint8)
+        filtered = np.copy(im)
+        # morph_kernel_small = np.ones((3, 3), np.uint8)
+        #cv2.morphologyEx(src=im, dst=im, op=cv2.MORPH_OPEN, iterations=1, kernel=morph_kernel)
+        #cv2.morphologyEx(src=im, dst=im, op=cv2.MORPH_CLOSE, iterations=1, kernel=morph_kernel)
+
+        im = im.astype(np.uint8, copy=False)
+        # im = self.skeletonize(im)
+        # cv2.morphologyEx(src=im, dst=im, op=cv2.MORPH_CLOSE, iterations=1, kernel=morph_kernel)
+        #cv2.morphologyEx(src=skeleton, dst=skeleton, op=cv2.MORPH_OPEN, iterations=1, kernel=morph_kernel_small)
 
         pt_x = [np.argmax(line > 0) for i, line in enumerate(im)]
         pt_y = np.arange(0, len(pt_x))
         pt_y = np.array([y for i, y in enumerate(pt_y) if pt_x[i] != 0])
         pt_x = np.array([x for x in pt_x if x != 0])
 
+        # pt_x, pt_y = self.centralSubset(pt_x, pt_y, 0.5)
         if subsampling:
             subregion_size = 10
             n_regions = 100
             pt_x_sub, centroids = self.subsampling(pt_x, subregion_size, n_regions)
-
-        if subsampling:
             data = [pt_x_sub, centroids]
         else:
             data = [pt_x, pt_y]
+        smoothing = False
 
         if smoothing:
             sigma = 11
             data = self.smoothing(data, sigma)
 
-        # plot = True
+        # plot = True
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.plot(data[0], data[1], lw=.2, color='orange')
+            ax.plot(data[0], data[1], lw=.2, color='red', alpha=0.5)
             ax.imshow(filtered)
-            # ax.set_xlim([700, 1200])
+            #ax.set_xlim([5700, 6000])
+            #ax.set_ylim([1200, 2700])
             ax.set_aspect('auto')
             fig.savefig(__location__ + '/../img/out/calibration_new_' +
-                        fn.split('.')[0].split('/')[-1] + '.png', dpi=300)
-        return data
+                        fn.split('.')[0].split('/')[-1] + '.png', dpi=900)
+        return data, src
+
+    def skeletonize(self, img):
+        """
+        Morphological skeletonization of the binary image
+        The image is eroded, dilated and subtracted before being compared with a logical or until one step before
+        the 0-image is obtained. The resulting image is the skeleton.
+
+        Parameters
+        ----------
+        img: 2D array
+            Binary image to be skeletonized
+
+        Returns
+        -------
+        skeleton: 2D array
+            skeletonized image
+        """
+        # t0 = time.time()
+        # Initialize arrays to do computation in place
+        skeleton = np.zeros(img.shape, np.uint8)
+        eroded = np.zeros(img.shape, np.uint8)
+        temp = np.zeros(img.shape, np.uint8)
+
+        kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+
+        while True:
+            cv2.erode(img, kernel, eroded)
+            cv2.dilate(eroded, kernel, temp)
+            cv2.subtract(img, temp, temp)
+            cv2.bitwise_or(skeleton, temp, skeleton)
+            img, eroded = eroded, img  # Swap instead of copy
+
+            if cv2.countNonZero(img) == 0:
+                # print('Skeletonization in', str(round(time.time() - t0, 2)), 's')
+                del eroded
+                del temp
+                return skeleton
+
+    def centralSubset(self, x, y, size):
+        npts = len(x)
+        nnew = int(npts * size)
+        xnew = x[(npts - nnew) // 2:(npts + nnew) // 2]
+        ynew = y[(npts - nnew) // 2:(npts + nnew) // 2]
+
+        return xnew, ynew
 
     def subsampling(self, x, n, size):
         """
@@ -177,17 +251,18 @@ class Calibrator:
             smoothed x-y coordinates
         """
         x, y = data
-        # minfiltered = ndimage.minimum_filter1d(x, sigma)
-        filtered = ndimage.gaussian_filter1d(x, sigma, mode='reflect')
-        filtered[:2 * sigma] = x[:2 * sigma]
-        filtered[-2 * sigma:] = x[-2 * sigma:]
-        dnew = filtered, y
+        x = ndimage.minimum_filter1d(x, sigma)
+        x = ndimage.maximum_filter1d(x, 4 * sigma)
+        # filtered = ndimage.gaussian_filter1d(x, sigma, mode='reflect')
+        #filtered[:2 * sigma] = x[:2 * sigma]
+        #filtered[-2 * sigma:] = x[-2 * sigma:]
+        dnew = x, y
 
         plot = False
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.plot(filtered, lw=0.5)
+            # ax.plot(filtered, lw=0.5)
             #ax.plot(x, lw=0.5)
             # ax.set_xlim([900, 2500])
             fig.savefig('smooting_debug.png', dpi=300)
@@ -306,6 +381,15 @@ class Calibrator:
             calibration.append(package)
         return calibration
 
+    def f(self, c, x, y, w=1, fixedR=None):
+        Ri = self.calc_R(x, y, *c)
+        if fixedR is None:
+            delta = Ri - Ri.mean()
+        else:
+            delta = Ri - fixedR
+        delta_w = delta * w
+        return delta_w
+
     def f_multivariate(self, c, *args):
         """
         Objective function for leqast squares regression
@@ -370,6 +454,19 @@ class Calibrator:
 
         return calibration
 
+    def leastsq_circle(self, x, y, w=1, fixedR=None):
+        x_m = np.mean(x)
+        y_m = np.mean(y)
+        center_estimate = x_m, y_m
+        # center, ier = optimize.leastsq(self.f, center_estimate, args=(x, y, w, fixedR))
+        opt = optimize.least_squares(self.f, center_estimate, args=(x, y, w, fixedR), jac='3-point')
+        center = opt['x']
+        xc, yc = center
+        Ri = self.calc_R(x, y, *center)
+        R = Ri.mean()
+        residu = np.sum((Ri - R)**2)
+        return (xc, yc, R, residu)
+
     def computeAll(self, tofile=False):
         """
         Compute all calibration midpoints
@@ -386,7 +483,21 @@ class Calibrator:
         """
         lock = mp.Lock()
         self.comp = Parmap(self.computeOutline, self.fns, lock=lock)
-        self.calibration = self.leastsq_circle_multivariate(self.comp)
+        edgePoints = [cmp[:-1][0] for cmp in self.comp]
+        images = [cmp[-1] for cmp in self.comp]
+        self.calibration = self.leastsq_circle_multivariate(edgePoints)
+        if False:
+            for i in range(len(self.calibration)):
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                ax.plot(edgePoints[i][0], edgePoints[i][1], lw=0.1, color='red')
+                circle = plt.Circle((self.calibration[i][0], self.calibration[i][1]),
+                                    self.calibration[i][2], facecolor='none', edgecolor='yellow')
+                ax.imshow(images[i])
+                ax.add_artist(circle)
+                ax.set_xlim([500, 1000])
+                ax.set_aspect('auto')
+                fig.savefig('skeletonDebug_' + str(i) + '.png', dpi=300)
         if tofile:
             np.save(__location__ + '/../data/calibration.npy', np.array(self.calibration))
         return np.array(self.calibration)

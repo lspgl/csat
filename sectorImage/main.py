@@ -1,4 +1,4 @@
-from core import image, linewalker, singleImage, stitcher
+from core import image, singleImage, stitcher
 from core.toolkit import pickler
 import numpy as np
 import time

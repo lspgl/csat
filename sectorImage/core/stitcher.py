@@ -112,14 +112,14 @@ class Stitcher:
                 #phis = image.angles[np.array(phis)] + dt[i]
                 rs = image.radii[np.array(rs)]
                 axx.plot(rs, lw=0.1)
-                axx.set_ylim([6020, 6040])
                 s = (phis, rs, i, j)
                 segments.append(s)
                 if plot:
                     ax.plot(phis, rs, lw=0.2)
                     # ax.plot(rs * np.cos(phis), rs * np.sin(phis), lw=0.2)
             # segments.append(img_segs)
-        self.startAngle = (2 * np.pi) - pstart
+        # self.startAngle = (2 * np.pi) - pstart
+        self.startAngle = pstart
         figg.savefig(__location__ + '/../img/out/debug.png', dpi=300)
         if plot:
             # ax.set_aspect('equal')
@@ -151,16 +151,6 @@ class Stitcher:
         plot = True
         segments = [Segment(*coords, identity=i) for i, coords in enumerate(segments)]
         # Calibration piece
-        """
-        calib_rs = np.empty(0)
-        calib_phis = np.empty(0)
-        for i in range(len(self.fns)):
-            img_segs = [s for s in segments if s.imgNum == i]
-            calib_seg = max(img_segs, key=operator.attrgetter('bandNum'))
-            calib_rs = np.append(calib_rs, calib_seg.rs)
-            calib_phis = np.append(calib_phis, calib_seg.phis)
-        calib_size_px = np.mean(calib_rs)"""
-
         calib_size_px = np.mean(np.array([x[2] for x in self.calibration]))
 
         # Dimensions of the calibration piece
@@ -293,16 +283,23 @@ class Stitcher:
         # scale = 1
         compR = compR[order] * scale
         compP = chirality * compP[::chirality]
-        if self.startAngle > compP[0] + (2 * np.pi):
+        print(chirality)
+        print(self.startAngle)
+        self.startAngle = chirality * self.startAngle
+        print('sta:', self.startAngle)
+
+        """
+        while self.startAngle > compP[0] + (2 * np.pi):
             print('Underturning Start Angle')
-            self.startAngle -= 2 * np.pi
+            self.startAngle -= 2 * np.pi"""
         start_idx = np.argmax(compP > self.startAngle)
 
         if start_idx == 0:
             print('Unraveling Start Angle')
             self.startAngle += 2 * np.pi
             start_idx = np.argmax(compP > self.startAngle)
-
+        # start_idx = 0
+        print(compP)
         compP = compP[start_idx:]
         compP -= compP[0]
         compP = chirality * compP[::chirality]
