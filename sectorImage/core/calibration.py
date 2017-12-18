@@ -108,7 +108,6 @@ class Calibrator:
             # Go figure...
             cpy = np.copy(im)
             im = cv2.linearPolar(cpy, c_estimate, im.shape[1] + dx, cv2.WARP_INVERSE_MAP)
-            print(np.max(im))
             im *= -1
 
         # cv2.threshold(src=im, dst=im, thresh=0, maxval=255, type=cv2.THRESH_TOZERO)[1]
@@ -167,7 +166,10 @@ class Calibrator:
             ax.set_aspect('auto')
             fig.savefig(__location__ + '/../img/out/calibration_new_' +
                         fn.split('.')[0].split('/')[-1] + '.png', dpi=900)
-        return data, src
+        del filtered
+        del im
+        del src
+        return data
 
     def skeletonize(self, img):
         """
@@ -491,9 +493,10 @@ class Calibrator:
             array of midpoint coordinates and respective radii
         """
         lock = mp.Lock()
-        self.comp = Parmap(self.computeOutline, self.fns, lock=lock)
-        edgePoints = [cmp[:-1][0] for cmp in self.comp]
-        images = [cmp[-1] for cmp in self.comp]
+        # self.comp = Parmap(self.computeOutline, self.fns, lock=lock)
+        edgePoints = Parmap(self.computeOutline, self.fns, lock=lock)
+        #edgePoints = [cmp[:-1][0] for cmp in self.comp]
+        #images = [cmp[-1] for cmp in self.comp]
         self.calibration = self.leastsq_circle_multivariate(edgePoints)
         if False:
             for i in range(len(self.calibration)):
@@ -502,7 +505,7 @@ class Calibrator:
                 ax.plot(edgePoints[i][0], edgePoints[i][1], lw=0.1, color='red')
                 circle = plt.Circle((self.calibration[i][0], self.calibration[i][1]),
                                     self.calibration[i][2], facecolor='none', edgecolor='yellow')
-                ax.imshow(images[i])
+                # ax.imshow(images[i])
                 ax.add_artist(circle)
                 ax.set_xlim([500, 1000])
                 ax.set_aspect('auto')
