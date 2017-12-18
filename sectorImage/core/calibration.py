@@ -71,19 +71,21 @@ class Calibrator:
         # print('Image loaded in', str(round(time.time() - t0, 2)), 's')
         src = src.astype(np.uint8, copy=False)
         # print('Blurring')
-        im = np.empty(np.shape(src), np.uint8)
+        # im = np.empty(np.shape(src), np.uint8)
 
         inversionMapping = True
         if inversionMapping:
             # c_estimate = (src.shape[1], src.shape[0] // 2)
             dx = 650
             c_estimate = (src.shape[1] + dx, src.shape[0] // 2)
-            src = cv2.linearPolar(src, c_estimate, src.shape[1] + dx, cv2.WARP_FILL_OUTLIERS)
+            im = cv2.linearPolar(src, c_estimate, src.shape[1] + dx, cv2.WARP_FILL_OUTLIERS)
+        else:
+            im = np.copy(src)
 
         # Gaussian Blur to remove fast features
         kernelsize = 5
         sigma = 1.0
-        cv2.GaussianBlur(src=src, ksize=(kernelsize, kernelsize), dst=im, sigmaX=sigma, sigmaY=sigma)
+        cv2.GaussianBlur(src=im, ksize=(kernelsize, kernelsize), dst=im, sigmaX=sigma, sigmaY=sigma)
 
         # print('Convolving')
         # Convolving with kernel
@@ -134,6 +136,8 @@ class Calibrator:
         pt_y = np.array([y for i, y in enumerate(pt_y) if pt_x[i] != 0])
         pt_x = np.array([x for x in pt_x if x != 0])
 
+        # blurCorrection = 3
+        # pt_x += blurCorrection
         # pt_x, pt_y = self.centralSubset(pt_x, pt_y, 0.5)
         if subsampling:
             subregion_size = 10
@@ -148,12 +152,12 @@ class Calibrator:
             sigma = 11
             data = self.smoothing(data, sigma)
 
-        # plot = True
+        # plot = True
         if plot:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.plot(data[0], data[1], lw=.2, color='red', alpha=0.5)
-            ax.imshow(filtered)
+            ax.plot(data[0], data[1], lw=.1, color='red', alpha=0.5)
+            ax.imshow(src)
             #ax.set_xlim([5700, 6000])
             #ax.set_ylim([1200, 2700])
             ax.set_aspect('auto')

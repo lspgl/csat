@@ -98,8 +98,6 @@ class Stitcher:
         segments = []
 
         ampstart = 0
-        figg = plt.figure()
-        axx = figg.add_subplot(111)
         for i, image in enumerate(self.images[::-1]):
             if image.start[1] > ampstart:
                 pstart = image.angles[image.start[0][0]] + (i * 2 * np.pi / len(self.fns))
@@ -111,7 +109,6 @@ class Stitcher:
                 # phis = image.angles[np.array(phis)] + (i * (np.pi - 2.75663253596))
                 #phis = image.angles[np.array(phis)] + dt[i]
                 rs = image.radii[np.array(rs)]
-                axx.plot(rs, lw=0.1)
                 s = (phis, rs, i, j)
                 segments.append(s)
                 if plot:
@@ -120,7 +117,6 @@ class Stitcher:
             # segments.append(img_segs)
         # self.startAngle = (2 * np.pi) - pstart
         self.startAngle = pstart
-        figg.savefig(__location__ + '/../img/out/debug.png', dpi=300)
         if plot:
             # ax.set_aspect('equal')
             ax.set_xlabel('Angle [rad]')
@@ -305,6 +301,8 @@ class Stitcher:
         compP = chirality * compP[::chirality]
         compR = compR[::chirality][start_idx:][::chirality]
 
+        self.linearizeMidpoint(compP, compR)
+
         compX = compR * np.cos(compP)
         compY = compR * np.sin(compP)
         if plot:
@@ -360,6 +358,11 @@ class Stitcher:
         grid = np.linspace(rmin, rmax, num=length, endpoint=True)
         for s in segments:
             ...
+
+    def linearizeMidpoint(self, compP, compR):
+        cutoff = 0.9
+        cutoff_idx = int(len(compP) * cutoff)
+        m, q = np.polyfit(compR, compP, 1)
 
     def loadSegments(self, fn='stitched.npy'):
         fn = __location__ + '/../data/' + fn

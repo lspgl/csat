@@ -4,6 +4,7 @@ import datetime
 from electrode import Electrode
 
 import numpy as np
+from scipy import optimize
 
 import matplotlib.pyplot as plt
 
@@ -72,6 +73,54 @@ class Pair:
                 payload = (phis, rs, scale, chirality)
                 self.electrodes.append(Electrode(self.serial, payload, calibration))
 
+    def optimizeLinearity(self, data, coverage=0.9):
+        opt = optimize.least_squares(self.linearity, (0, 0), args=(data, coverage), jac='2-point')
+        print(opt.x)
+        dx, dy = opt.x
+        phi, r = data
+        x = r * np.cos(phi)
+        y = r * np.sin(phi)
+        xnew = x + dx
+        ynew = y + dy
+
+        rn = np.sqrt(np.square(xnew) + np.square(ynew))
+        phin = np.arctan2(ynew, xnew)
+        phin -= phin[0]
+        deltas = np.abs(np.array([phii - phin[i + 1] for i, phii in enumerate(phin[:-1])]))
+        indices = np.argwhere(deltas >= np.pi).flatten()
+        shift = np.zeros(len(phin))
+        for idx in indices:
+            inew = idx + 1
+            shift[inew:] = shift[inew:] + (2 * np.pi)
+        phin += shift
+
+        dnew = (phin, rn)
+
+        return dnew
+
+    def linearity(self, shift, data, coverage):
+        phi, r = data
+        x = r * np.cos(phi)
+        y = r * np.sin(phi)
+        dx, dy = shift
+
+        xn = x + dx
+        yn = y + dy
+
+        rn = np.sqrt(np.square(xn) + np.square(yn))
+        phin = np.arctan2(yn, xn)
+        phin -= phin[0]
+        deltas = np.abs(np.array([phii - phin[i + 1] for i, phii in enumerate(phin[:-1])]))
+        indices = np.argwhere(deltas >= np.pi).flatten()
+        shift = np.zeros(len(phin))
+        for idx in indices:
+            inew = idx + 1
+            shift[inew:] = shift[inew:] + (2 * np.pi)
+        phin += shift
+        pkg = np.polyfit(x=phin[:int(len(phin) * coverage)], y=rn[:int(len(rn) * coverage)], deg=1, full=True)
+        residual = pkg[1][0]
+        return residual
+
     def computeGap(self):
         lengths = []
         max_phis = []
@@ -89,11 +138,17 @@ class Pair:
         ax = fig.add_subplot(111)
         for i, e in enumerate(self.electrodes):
             r_interp = np.interp(global_phis, np.abs(e.phis)[::e.chirality], e.rs[::e.chirality])
-            global_phis += i * np.pi
-            x = r_interp * np.cos(global_phis)
-            y = r_interp * np.sin(global_phis)
+            data = (global_phis, r_interp)
+            pnew, rnew = self.optimizeLinearity(data)
+            pnew += i * np.pi
+            x = rnew * np.cos(pnew)
+            y = rnew * np.sin(pnew)
             ax.plot(x, y, lw=1)
+
         ax.set_aspect('equal')
+        #ax.set_xlim([0, 10])
+        #ax.set_ylim([0, 10])
+
         fig.savefig(__location__ + '/data/plots/' + str(self.serial) + '_interpolated.png', dpi=300)
 
     def plot(self):
