@@ -104,8 +104,11 @@ class Calibrator:
             im += (np.abs(im_y) * scaling).astype(np.int16, copy=False)
             del im_y
         else:
-
-            im = cv2.linearPolar(im, c_estimate, im.shape[1] + dx, cv2.WARP_INVERSE_MAP)
+            # Apparently opencv breaks if the transformed image isn't copied first in multiprocessing.
+            # Go figure...
+            cpy = np.copy(im)
+            im = cv2.linearPolar(cpy, c_estimate, im.shape[1] + dx, cv2.WARP_INVERSE_MAP)
+            print(np.max(im))
             im *= -1
 
         # cv2.threshold(src=im, dst=im, thresh=0, maxval=255, type=cv2.THRESH_TOZERO)[1]
@@ -113,15 +116,16 @@ class Calibrator:
 
         # print('Thresholding')
         # mean_val = np.mean(im)
+        # print(np.max(im))
         std_val = np.std(im)
         # thresh = mean_val + 3 * std_val
         thresh = 2 * std_val
         # im *= -1
-
+        filtered = np.copy(im)
         cv2.threshold(src=im, dst=im, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
 
         # morph_kernel = np.ones((5, 5), np.uint8)
-        filtered = np.copy(im)
+
         # morph_kernel_small = np.ones((3, 3), np.uint8)
         #cv2.morphologyEx(src=im, dst=im, op=cv2.MORPH_OPEN, iterations=1, kernel=morph_kernel)
         #cv2.morphologyEx(src=im, dst=im, op=cv2.MORPH_CLOSE, iterations=1, kernel=morph_kernel)
@@ -157,7 +161,7 @@ class Calibrator:
             fig = plt.figure()
             ax = fig.add_subplot(111)
             ax.plot(data[0], data[1], lw=.1, color='red', alpha=0.5)
-            ax.imshow(src)
+            ax.imshow(filtered)
             #ax.set_xlim([5700, 6000])
             #ax.set_ylim([1200, 2700])
             ax.set_aspect('auto')
@@ -441,6 +445,7 @@ class Calibrator:
             y_m = np.mean(y)
             mp = np.array([x_m, y_m])
             center_estimates = np.append(center_estimates, mp)
+
         opt = optimize.least_squares(self.f_multivariate, center_estimates, args=data, jac='2-point')
         calibration = []
         Rs = []
