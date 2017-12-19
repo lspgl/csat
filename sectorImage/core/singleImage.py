@@ -36,7 +36,8 @@ class SingleImage:
         """
         self.img = image.Image(self.fn, self.calibration, lock=lock)
         angularLines, self.angles, self.radii = self.img.transformRadial(plot=False, env=env)
-        self.features, self.start = self.img.detectFeatures(angularLines, plot=False)
+        self.features, ygradients = self.img.detectFeatures(angularLines, plot=False)
+        self.start, self.end = ygradients
         if npz is not None:
             print('Storing Features in', npz)
             np.savez(npz, f=self.features, a=self.angles)

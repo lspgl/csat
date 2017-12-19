@@ -17,11 +17,6 @@ class Walker:
         """
         self.image = image
         self.skeleton = self.skeletonize(self.image)
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.imshow(self.skeleton)
-        ax.set_aspect('auto')
-        fig.savefig('skeletonDebug', dpi=300)
 
     def walkSkeleton(self, plot=False, maxwidth=10):
         """

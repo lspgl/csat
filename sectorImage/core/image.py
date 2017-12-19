@@ -89,10 +89,6 @@ class Image:
 
         #c = tuple(midpoint)
         cx, cy = midpoint
-        # TODO: Find out why there is this shift
-        shift = 0
-        cx -= shift
-
         c = (cx, cy)
 
         transformed = cv2.linearPolar(self.image, c, rmax, cv2.WARP_FILL_OUTLIERS)
@@ -160,9 +156,11 @@ class Image:
         """
         # t0 = time.time()
         start_range = 2000
+        end_range = np.shape(matrix)[1] - start_range
         # Initializing Empty array in Memory
         proc = np.empty(np.shape(matrix))
         start_search = np.empty(np.shape(matrix))[:, :start_range]
+        end_search = np.empty(np.shape(matrix))[:, start_range:]
         matrix = matrix.astype(np.float64, copy=False)
         # print('Blurring')
         # Gaussian Blur to remove fast features
@@ -170,22 +168,47 @@ class Image:
         cv2.GaussianBlur(src=matrix, ksize=(0, 3), dst=proc, sigmaX=3, sigmaY=0)
         cv2.GaussianBlur(src=matrix[:, :start_range], ksize=(3, 0), dst=start_search, sigmaX=0, sigmaY=3)
 
+        cv2.GaussianBlur(src=matrix[:, start_range:], ksize=(3, 0), dst=end_search, sigmaX=0, sigmaY=1)
+
         # print('Convolving')
         # Convolving with Prewitt kernel in x-direction
         prewitt_kernel_x = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
         kernel_y_width = 30
         prewitt_kernel_y = np.array([[1] * kernel_y_width, [0] *
                                      kernel_y_width, [-1] * kernel_y_width])
+
+        # print(prewitt_kernel_y_end)
         cv2.threshold(src=start_search, dst=start_search, thresh=100, maxval=255, type=cv2.THRESH_TOZERO)
         cv2.filter2D(src=start_search, kernel=prewitt_kernel_y, dst=start_search, ddepth=-1)
+
+        cv2.threshold(src=end_search, dst=end_search, thresh=20, maxval=255, type=cv2.THRESH_TOZERO)
+        ndimage.minimum_filter(end_search, size=(15, 1), output=end_search)
+        cv2.filter2D(src=end_search, kernel=prewitt_kernel_y, dst=end_search, ddepth=-1)
+
         cv2.filter2D(src=proc, kernel=prewitt_kernel_x, dst=proc, ddepth=-1)
+
         np.abs(start_search, out=start_search)
+        np.abs(end_search, out=end_search)
+
         np.abs(proc, out=proc)
 
         start_amp = start_search.max()
         start_idx = np.unravel_index(start_search.argmax(), start_search.shape)
         start = (start_idx, start_amp)
 
+        end_amp = end_search.max()
+        end_idx = np.unravel_index(end_search.argmax(), end_search.shape)
+        ex, ey = end_idx
+        if ey != 0:
+            ey += start_range
+        end_idx = (ex, ey)
+        end = (end_idx, end_amp)
+        del start_search
+        # del end_search
+        print(self.id)
+        print(end_amp)
+        print(end_idx)
+        print()
         # print('Thresholding')
 
         # Threshold to 30% for noise reduction
@@ -227,15 +250,16 @@ class Image:
 
         # Combine foreground noise with with thresholded image
         cv2.bitwise_or(src1=proc, src2=labels, dst=proc)
+        # plot = True
         if plot:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.imshow(proc)
+            ax.imshow(end_search)
             ax.set_aspect('auto')
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')
-            fig.savefig(__location__ + '/../img/out/filter' + str(self.id) + '.png', dpi=600, interpolation='none')
+            fig.savefig(__location__ + '/../img/out/filter' + str(self.id) + '.png', dpi=300, interpolation='none')
 
         # print('Features detected in', str(round(time.time() - t0, 2)), 's')
-        return proc, start
+        return proc, (start, end)

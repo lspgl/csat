@@ -98,11 +98,16 @@ class Stitcher:
         segments = []
 
         ampstart = 0
+        ampend = 0
         for i, image in enumerate(self.images[::-1]):
             if image.start[1] > ampstart:
                 pstart = image.angles[image.start[0][0]] + (i * 2 * np.pi / len(self.fns))
                 #pstart = image.angles[image.start[0][0]] + dt[i]
                 ampstart = image.start[1]
+            if image.end[1] > ampend:
+                pend = image.angles[image.end[0][0]] + (i * 2 * np.pi / len(self.fns))
+                ampend = image.end[1]
+
             for j, coord in enumerate(zip(image.r, image.phi)):
                 rs, phis = coord
                 phis = image.angles[np.array(phis)] + (i * 2 * np.pi / len(self.fns))
@@ -117,6 +122,7 @@ class Stitcher:
             # segments.append(img_segs)
         # self.startAngle = (2 * np.pi) - pstart
         self.startAngle = pstart
+        self.endAngle = pend
         if plot:
             # ax.set_aspect('equal')
             ax.set_xlabel('Angle [rad]')
@@ -200,7 +206,6 @@ class Stitcher:
             bandR = np.empty(0)
             bandP = np.empty(0)
             if not skipFlag:
-                self.optimizeOverlap(combined)
                 for c in combined:
                     bandR = np.append(bandR, c.rs)
                     bandP = np.append(bandP, c.phis)
@@ -279,15 +284,18 @@ class Stitcher:
         # scale = 1
         compR = compR[order] * scale
         compP = chirality * compP[::chirality]
-        # print(chirality)
-        # print(self.startAngle)
-        self.startAngle = chirality * self.startAngle
-        # print('sta:', self.startAngle)
 
-        """
-        while self.startAngle > compP[0] + (2 * np.pi):
-            print('Underturning Start Angle')
-            self.startAngle -= 2 * np.pi"""
+        self.startAngle = chirality * self.startAngle
+        self.endAngle = (chirality * -1 + 1) * np.pi + (chirality * self.endAngle)
+
+        while True:
+            self.endAngle += 2 * np.pi
+            test_idx = np.argmax(compP > self.endAngle)
+            if test_idx == 0:
+                self.endAngle -= 2 * np.pi
+                end_idx = np.argmax(compP > self.endAngle)
+                break
+
         start_idx = np.argmax(compP > self.startAngle)
 
         if start_idx == 0:
@@ -296,12 +304,10 @@ class Stitcher:
             start_idx = np.argmax(compP > self.startAngle)
         # start_idx = 0
         # print(compP)
-        compP = compP[start_idx:]
+        compP = compP[start_idx:end_idx]
         compP -= compP[0]
         compP = chirality * compP[::chirality]
-        compR = compR[::chirality][start_idx:][::chirality]
-
-        self.linearizeMidpoint(compP, compR)
+        compR = compR[::chirality][start_idx:end_idx][::chirality]
 
         compX = compR * np.cos(compP)
         compY = compR * np.sin(compP)
@@ -350,19 +356,6 @@ class Stitcher:
 
         parametrized = (compP, compR, scale, chirality)
         return parametrized
-
-    def optimizeOverlap(self, segments):
-        rmin = min([np.min(s.rs) for s in segments])
-        rmax = max([np.max(s.rs) for s in segments])
-        length = sum([len(s.rs) for s in segments])
-        grid = np.linspace(rmin, rmax, num=length, endpoint=True)
-        for s in segments:
-            ...
-
-    def linearizeMidpoint(self, compP, compR):
-        cutoff = 0.9
-        cutoff_idx = int(len(compP) * cutoff)
-        m, q = np.polyfit(compR, compP, 1)
 
     def loadSegments(self, fn='stitched.npy'):
         fn = __location__ + '/../data/' + fn
