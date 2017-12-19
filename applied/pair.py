@@ -3,17 +3,20 @@ import h5py
 import datetime
 from electrode import Electrode
 
+import time
+
 import numpy as np
 from scipy import optimize
 
 import matplotlib.pyplot as plt
-
+from tools.colors import Colors as _C
 
 import os
 import sys
 __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
 sys.path.append(__location__ + '/../')
+from sectorImage.core.toolkit.parmap import Parmap
 
 
 class Pair:
@@ -22,17 +25,45 @@ class Pair:
         if not fromFile:
             self.initializeFromMeasurement(*args, **kwargs)
         else:
-            self.load(*args)
+            self.load(*args, **kwargs)
 
     def initializeFromMeasurement(self, env, electrodes, serial):
+        self.serial = serial
         self.env = env
         self.electrodes = sorted(electrodes, key=operator.attrgetter('chirality'))
         if self.electrodes[0].chirality == self.electrodes[1].chirality:
             raise Exception('Chirality Error')
-        self.serial = serial
+        self.correctMidpoint()
+        self.optimizeRotation()
         t = datetime.datetime.now()
         self.timestamp = (str(t.year) + '-' + str(t.month) + '-' + str(t.day) + '-' +
                           str(t.hour) + '-' + str(t.minute) + '-' + str(t.second))
+
+    def correctMidpoint(self):
+        print(_C.BLUE + 'Correcting midpoint' + _C.ENDC)
+        lengths = []
+        max_phis = []
+        for i, e in enumerate(self.electrodes[:]):
+            data = (np.abs(e.phis[::e.chirality]), e.rs[::e.chirality])
+            pnew, rnew = self.optimizeLinearity(data)
+            phiAbs = np.abs(pnew)
+            npts = len(phiAbs)
+            lengths.append(npts)
+            pmax = phiAbs[-1]
+            max_phis.append(pmax)
+
+            self.electrodes[i].phis = pnew[:]
+            self.electrodes[i].rs = rnew[:]
+
+        max_length = min(lengths)
+        max_phi = min(max_phis)
+
+        global_phis = np.linspace(0, max_phi, num=max_length, endpoint=True)
+
+        for i, e in enumerate(self.electrodes[:]):
+            r_interp = np.interp(global_phis, e.phis, e.rs)
+            self.electrodes[i].rs = r_interp[:]
+            self.electrodes[i].phis = global_phis[:] + i * np.pi
 
     def store(self, fn=None):
         if fn is not None:
@@ -57,7 +88,7 @@ class Pair:
                 g.attrs['Scale'] = e.scale
                 g.create_dataset('calibration', data=e.calibration)
 
-    def load(self, fn):
+    def load(self, fn, corrections=False):
         self.electrodes = []
         with h5py.File(__location__ + '/data/' + fn, 'r') as f:
             attributes = f.attrs
@@ -72,37 +103,90 @@ class Pair:
                 scale = g.attrs['Scale']
                 payload = (phis, rs, scale, chirality)
                 self.electrodes.append(Electrode(self.serial, payload, calibration))
+        if corrections:
+            self.correctMidpoint()
+            self.optimizeRotation()
+
+    def computeGaps(self, shift, opt=True, plot=False):
+        e0, eRot = self.electrodes[:]
+        phiRef = eRot.phis[:] + shift
+
+        validRot_start = np.argmax(phiRef > 2 * np.pi)
+        validRot_end = np.argmax(e0.phis > phiRef[-1] - 2 * np.pi)
+        if validRot_end == 0:
+            validRot_end = len(phiRef) - 1
+        if abs(len(eRot.rs[validRot_start:]) - len(e0.rs[:validRot_end])) == 1:
+            if len(eRot.rs[validRot_start:]) < len(e0.rs[:validRot_end]):
+                validRot_start -= 1
+            else:
+                validRot_start += 1
+        gapRot = eRot.rs[validRot_start:] - e0.rs[:validRot_end]
+
+        valid0_start = np.argmax(e0.phis > phiRef[0])
+        valid0_end = np.argmax(phiRef > e0.phis[-1])
+        if valid0_end == 0:
+            valid0_end = len(e0.phis) - 1
+        if abs(len(e0.rs[valid0_start:]) - len(eRot.rs[:valid0_end])) == 1:
+            if len(e0.rs[valid0_start:]) < len(eRot.rs[:valid0_end]):
+                valid0_start -= 1
+            else:
+                valid0_start += 1
+        gap0 = e0.rs[valid0_start:] - eRot.rs[:valid0_end]
+
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(e0.phis[:valid0_end], gap0, color=plt.cm.viridis(0), lw=0.2)
+            ax.plot(phiRef[:validRot_end], gapRot, color=plt.cm.viridis(1 / 1.5), lw=0.2)
+            ax.set_title('Electrode Gaps')
+            ax.set_xlabel('Angle [rad]')
+            ax.set_ylabel('Gap [mm]')
+            fig.savefig(__location__ + '/data/plots/' + str(self.serial) + '_gaps.png', dpi=300)
+        if opt:
+            retarr = np.append(np.array(gap0), np.array(gapRot))
+            retval = np.std(retarr)
+            return retval
+        else:
+            return (gap0, gapRot)
+
+    def optimizeRotation(self, plot=False):
+        print(_C.BLUE + 'Optimizing relative angle' + _C.ENDC)
+        resolution = 10
+        scanRange = np.linspace(-np.pi, np.pi, num=resolution)
+        vfunc = np.vectorize(self.computeGaps)
+        stds = vfunc(scanRange)
+        minCoarse = scanRange[np.argmin(stds)]
+
+        resolutionFine = 100
+        scanRangeFine = np.linspace(minCoarse - (2 * np.pi / resolution), minCoarse +
+                                    (2 * np.pi / resolution), num=resolutionFine)
+        stdsFine = vfunc(scanRangeFine)
+        minFine = scanRangeFine[np.argmin(stdsFine)]
+        self.electrodes[1].phis += minFine
+        self.computeGaps(shift=0, opt=False, plot=True)
+        if plot:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.plot(scanRange, stds)
+            ax.plot(scanRangeFine, stdsFine)
+            fig.savefig('shiftDebug.png', dpi=300)
 
     def optimizeLinearity(self, data, coverage=0.9):
         opt = optimize.least_squares(self.linearity, (0, 0), args=(data, coverage), jac='2-point')
-        print(opt.x)
-        dx, dy = opt.x
-        phi, r = data
-        x = r * np.cos(phi)
-        y = r * np.sin(phi)
-        xnew = x + dx
-        ynew = y + dy
-
-        rn = np.sqrt(np.square(xnew) + np.square(ynew))
-        phin = np.arctan2(ynew, xnew)
-        phin -= phin[0]
-        deltas = np.abs(np.array([phii - phin[i + 1] for i, phii in enumerate(phin[:-1])]))
-        indices = np.argwhere(deltas >= np.pi).flatten()
-        shift = np.zeros(len(phin))
-        for idx in indices:
-            inew = idx + 1
-            shift[inew:] = shift[inew:] + (2 * np.pi)
-        phin += shift
-
-        dnew = (phin, rn)
-
+        dnew = self.translatePolar(opt.x, data)
         return dnew
 
-    def linearity(self, shift, data, coverage):
+    def linearity(self, translation, data, coverage):
+        phin, rn = self.translatePolar(translation, data)
+        pkg = np.polyfit(x=phin[:int(len(phin) * coverage)], y=rn[:int(len(rn) * coverage)], deg=1, full=True)
+        residual = pkg[1][0]
+        return residual
+
+    def translatePolar(self, translation, data):
         phi, r = data
         x = r * np.cos(phi)
         y = r * np.sin(phi)
-        dx, dy = shift
+        dx, dy = translation
 
         xn = x + dx
         yn = y + dy
@@ -110,54 +194,27 @@ class Pair:
         rn = np.sqrt(np.square(xn) + np.square(yn))
         phin = np.arctan2(yn, xn)
         phin -= phin[0]
-        deltas = np.abs(np.array([phii - phin[i + 1] for i, phii in enumerate(phin[:-1])]))
+        deltas = phin[:-1] - phin[1:]
+
         indices = np.argwhere(deltas >= np.pi).flatten()
         shift = np.zeros(len(phin))
         for idx in indices:
             inew = idx + 1
             shift[inew:] = shift[inew:] + (2 * np.pi)
         phin += shift
-        pkg = np.polyfit(x=phin[:int(len(phin) * coverage)], y=rn[:int(len(rn) * coverage)], deg=1, full=True)
-        residual = pkg[1][0]
-        return residual
 
-    def computeGap(self):
-        lengths = []
-        max_phis = []
-        for e in self.electrodes:
-            phiAbs = np.abs(e.phis)[::e.chirality]
-            npts = len(phiAbs)
-            lengths.append(npts)
-            pmax = phiAbs[-1]
-            max_phis.append(pmax)
-        max_length = min(lengths)
-        max_phi = min(max_phis)
-
-        global_phis = np.linspace(0, max_phi, num=max_length, endpoint=True)
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        for i, e in enumerate(self.electrodes):
-            r_interp = np.interp(global_phis, np.abs(e.phis)[::e.chirality], e.rs[::e.chirality])
-            data = (global_phis, r_interp)
-            pnew, rnew = self.optimizeLinearity(data)
-            pnew += i * np.pi
-            x = rnew * np.cos(pnew)
-            y = rnew * np.sin(pnew)
-            ax.plot(x, y, lw=1)
-
-        ax.set_aspect('equal')
-        #ax.set_xlim([0, 10])
-        #ax.set_ylim([0, 10])
-
-        fig.savefig(__location__ + '/data/plots/' + str(self.serial) + '_interpolated.png', dpi=300)
+        return (phin, rn)
 
     def plot(self):
         fig = plt.figure()
-        ax1 = fig.add_subplot(121)
-        ax2 = fig.add_subplot(122)
-        axes = [ax1, ax2]
-
-        for i, ax in enumerate(axes):
-            ax.plot(self.electrodes[i].phis, self.electrodes[i].rs)
+        ax = fig.add_subplot(111)
+        for i, e in enumerate(self.electrodes):
+            x = e.rs * np.cos(e.phis)
+            y = e.rs * np.sin(e.phis)
+            ax.plot(x, y, color=plt.cm.viridis(i / 1.5), lw=0.8)
+        ax.set_aspect('equal')
+        ax.set_title('Combined Electrode')
+        ax.set_xlabel('X [mm]')
+        ax.set_ylabel('Y [mm]')
 
         fig.savefig(__location__ + '/data/plots/' + str(self.serial) + '.png', dpi=300)

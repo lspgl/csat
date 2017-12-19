@@ -10,3 +10,4 @@ sectorImage/img/out/*.png
 hardware/*.jpg
 hardware/shielded
 *.h5
+applied/data/plots/*.png
