@@ -279,10 +279,10 @@ class Stitcher:
         # scale = 1
         compR = compR[order] * scale
         compP = chirality * compP[::chirality]
-        print(chirality)
-        print(self.startAngle)
+        # print(chirality)
+        # print(self.startAngle)
         self.startAngle = chirality * self.startAngle
-        print('sta:', self.startAngle)
+        # print('sta:', self.startAngle)
 
         """
         while self.startAngle > compP[0] + (2 * np.pi):
@@ -295,7 +295,7 @@ class Stitcher:
             self.startAngle += 2 * np.pi
             start_idx = np.argmax(compP > self.startAngle)
         # start_idx = 0
-        print(compP)
+        # print(compP)
         compP = compP[start_idx:]
         compP -= compP[0]
         compP = chirality * compP[::chirality]
