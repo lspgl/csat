@@ -179,6 +179,7 @@ class Image:
 
         # print(prewitt_kernel_y_end)
         cv2.threshold(src=start_search, dst=start_search, thresh=100, maxval=255, type=cv2.THRESH_TOZERO)
+        ndimage.minimum_filter(start_search, size=(15, 1), output=start_search)
         cv2.filter2D(src=start_search, kernel=prewitt_kernel_y, dst=start_search, ddepth=-1)
 
         cv2.threshold(src=end_search, dst=end_search, thresh=20, maxval=255, type=cv2.THRESH_TOZERO)
@@ -204,11 +205,10 @@ class Image:
         end_idx = (ex, ey)
         end = (end_idx, end_amp)
         del start_search
-        # del end_search
         print(self.id)
-        print(end_amp)
-        print(end_idx)
+        print(end)
         print()
+        # del end_search
         # print('Thresholding')
 
         # Threshold to 30% for noise reduction

@@ -22,7 +22,7 @@ def CombinedSequence(n, directory, env):
     c.plotCalibration()
     print(_C.BOLD + _C.CYAN + 'Calibration completed in ' + str(round(time.time() - t1, 2)) + 's' + _C.ENDC)
     t2 = time.time()
-    s = Stitcher(fns, calibration=calibrationNew, mpflag=True, env=env)
+    s = Stitcher(fns, calibration=calibration, mpflag=True, env=env)
     s.loadImages()
     segments = s.stitchImages(plot=True)
     spiral = s.combineSegments(segments, plot=True)

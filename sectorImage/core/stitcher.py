@@ -292,7 +292,8 @@ class Stitcher:
 
         self.startAngle = chirality * self.startAngle
         self.endAngle = (chirality * -1 + 1) * np.pi + (chirality * self.endAngle)
-
+        print(self.startAngle)
+        print(self.endAngle)
         while True:
             self.endAngle += 2 * np.pi
             test_idx = np.argmax(compP > self.endAngle)
