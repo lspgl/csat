@@ -114,10 +114,14 @@ class Stitcher:
                 # phis = image.angles[np.array(phis)] + (i * (np.pi - 2.75663253596))
                 #phis = image.angles[np.array(phis)] + dt[i]
                 rs = image.radii[np.array(rs)]
-                s = (phis, rs, i, j)
-                segments.append(s)
-                if plot:
-                    ax.plot(phis, rs, lw=0.2)
+                dr = rs[:-1] - rs[1:]
+                # std = np.std(dr)
+                outlier = np.max(np.abs(dr))
+                if outlier < 500:
+                    s = (phis, rs, i, j)
+                    segments.append(s)
+                    if plot:
+                        ax.plot(phis, rs, lw=0.2)
                     # ax.plot(rs * np.cos(phis), rs * np.sin(phis), lw=0.2)
             # segments.append(img_segs)
         # self.startAngle = (2 * np.pi) - pstart
@@ -127,12 +131,18 @@ class Stitcher:
             # ax.set_aspect('equal')
             ax.set_xlabel('Angle [rad]')
             ax.set_ylabel('Radius [px]')
+            # ax.set_ylim([1300, 1550])
             fig.savefig(__location__ + '/../img/out/stitched.png', dpi=600)
 
         if tofile:
             np.save(__location__ + '/../data/stitched.npy', segments)
 
         return segments
+
+    def getNearestSegment(self, refPoint, segments):
+        r0 = refPoint[1]
+        dr_min = np.array([np.min(np.abs(s.rs - r0)) for s in segments])
+        return segments[np.argmin(dr_min)], np.min(dr_min)
 
     def combineSegments(self, segments, plot=False):
         """
@@ -188,19 +198,16 @@ class Stitcher:
                               combined[-1].imgNum + 1 and s.identity not in connected_ids]
                 if len(candidates) == 0:
                     break
-                # Connect EP to candiate LP
+                # Connect EP to candiate
                 ep = combined[-1].ep
-                candidates_lp = [c.lp for c in candidates]
-                # sortedPt = sorted(candidates_lp, key=lambda x: vectools.pointdistPolar(x, ep))
-                nearestPt = min(candidates_lp, key=lambda x: abs(x[1] - ep[1]))
-                if abs(nearestPt[1] - ep[1]) > 0.25 * pitch:
+                nearest_seg, dr = self.getNearestSegment(ep, candidates)
+                if dr > 3.0:
                     print(_C.BLUE + 'Breaking left' + _C.ENDC)
                     Lbreak += 1
                     if Lbreak > 1:
                         skipFlag = True
                     break
-                nearest_idx = candidates_lp.index(nearestPt)
-                nearest_seg = candidates[nearest_idx]
+
                 combined.append(nearest_seg)
                 connected_ids.append(nearest_seg.identity)
             bandR = np.empty(0)
@@ -227,18 +234,16 @@ class Stitcher:
                               combined[-1].imgNum - 1 and s.identity not in connected_ids]
                 if len(candidates) == 0:
                     break
-                # Connect EP to candiate LP
+                # Connect LP to candiate
                 lp = combined[-1].lp
-                candidates_ep = [c.ep for c in candidates]
-                nearestPt = min(candidates_ep, key=lambda x: abs(x[1] - lp[1]))
-                if abs(nearestPt[1] - lp[1]) > 0.25 * pitch:
-                    print(_C.BLUE + 'Breaking right' + _C.ENDC)
+                nearest_seg, dr = self.getNearestSegment(lp, candidates)
+                if dr > 3.0:
+                    print(_C.BLUE + 'Breaking left' + _C.ENDC)
                     Rbreak += 1
                     if Rbreak > 1:
                         skipFlag = True
                     break
-                nearest_idx = candidates_ep.index(nearestPt)
-                nearest_seg = candidates[nearest_idx]
+
                 combined.append(nearest_seg)
                 connected_ids.append(nearest_seg.identity)
 
