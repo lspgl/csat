@@ -165,7 +165,8 @@ class Image:
         # print('Blurring')
         # Gaussian Blur to remove fast features
 
-        cv2.GaussianBlur(src=matrix, ksize=(0, 3), dst=proc, sigmaX=3, sigmaY=0)
+        cv2.GaussianBlur(src=matrix, ksize=(15, 3), dst=proc, sigmaX=1.5, sigmaY=10)
+        ndimage.maximum_filter(proc, size=(5, 15), output=proc)
         # cv2.GaussianBlur(src=matrix[:, :start_range], ksize=(3, 0), dst=start_search, sigmaX=0, sigmaY=3)
 
         # cv2.GaussianBlur(src=matrix[:, start_range:], ksize=(31, 11), dst=end_search, sigmaX=0, sigmaY=0.1)
@@ -173,7 +174,10 @@ class Image:
         end_search = matrix[:, start_range:]
         # print('Convolving')
         # Convolving with Prewitt kernel in x-direction
-        prewitt_kernel_x = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
+        prewitt_kernel_x = np.tile([-1, 0, 1], (15, 1))
+        # prewitt_kernel_x = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
+        # print(prewitt_kernel_x)
+        # prewitt_kernel_x = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
         kernel_y_width = 15
         prewitt_kernel_y = np.array([[1] * kernel_y_width, [0] *
                                      kernel_y_width, [-1] * kernel_y_width])
@@ -194,13 +198,12 @@ class Image:
         cv2.filter2D(src=end_search, kernel=prewitt_kernel_y, dst=end_search, ddepth=-1)
 
         cv2.filter2D(src=proc, kernel=prewitt_kernel_x, dst=proc, ddepth=-1)
-        cv2.GaussianBlur(src=proc, ksize=(11, 0), dst=proc, sigmaX=0, sigmaY=5)
+        cv2.GaussianBlur(src=proc, ksize=(11, 3), dst=proc, sigmaX=0, sigmaY=5)
 
         np.abs(start_search, out=start_search)
         np.abs(end_search, out=end_search)
 
         np.abs(proc, out=proc)
-        filtered = np.copy(proc)
 
         start_amp = start_search.max()
         start_idx = np.unravel_index(start_search.argmax(), start_search.shape)
@@ -221,8 +224,10 @@ class Image:
         proc_std = np.std(proc)
 
         thresh = proc_mean + thresh_std * proc_std
+        thresh = 50.0
         # thresh = proc_mean
         # thresh = 0.1
+
         cv2.threshold(src=proc, dst=proc, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
 
         proc = proc.astype(np.uint8, copy=False)
@@ -233,7 +238,7 @@ class Image:
         n_labels, labels, l_stats, l_centroids = cv2.connectedComponentsWithStats(image=proc_inv, connectivity=4)
         # The maximum number of pixels in a noise field
         # Everything larger is considered to be background
-        fieldsize = 1e4
+        fieldsize = 2e4
         # Label background fields
         gaps = []
         for i, stat in enumerate(l_stats):
@@ -249,12 +254,14 @@ class Image:
 
         # Combine foreground noise with with thresholded image
         cv2.bitwise_or(src1=proc, src2=labels, dst=proc)
+        filtered = np.copy(proc)
         # plot = True
         if plot:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
             ax.imshow(filtered)
+            # ax.plot(filtered[0])
             ax.set_aspect('auto')
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')
