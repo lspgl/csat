@@ -139,9 +139,9 @@ class Stitcher:
 
         return segments
 
-    def getNearestSegment(self, refPoint, segments):
+    def getNearestSegment(self, refPoint, segments, fraction=1):
         r0 = refPoint[1]
-        dr_min = np.array([np.min(np.abs(s.rs - r0)) for s in segments])
+        dr_min = np.array([np.min(np.abs(s.rs[:int(fraction * (len(s.rs) - 1))] - r0)) for s in segments])
         return segments[np.argmin(dr_min)], np.min(dr_min)
 
     def combineSegments(self, segments, plot=False):
@@ -201,11 +201,14 @@ class Stitcher:
                 # Connect EP to candiate
                 ep = combined[-1].ep
                 nearest_seg, dr = self.getNearestSegment(ep, candidates)
+
                 if dr > 3.0:
+                    # if dr > 10.0 and (dr > 100 and ep[1] > 3000):
                     print(_C.BLUE + 'Breaking left' + _C.ENDC)
                     Lbreak += 1
                     if Lbreak > 1:
-                        skipFlag = True
+                        pass
+                        # skipFlag = True
                     break
 
                 combined.append(nearest_seg)
@@ -238,10 +241,11 @@ class Stitcher:
                 lp = combined[-1].lp
                 nearest_seg, dr = self.getNearestSegment(lp, candidates)
                 if dr > 3.0:
-                    print(_C.BLUE + 'Breaking left' + _C.ENDC)
+                    print(_C.BLUE + 'Breaking right' + _C.ENDC)
                     Rbreak += 1
                     if Rbreak > 1:
-                        skipFlag = True
+                        pass
+                        # skipFlag = True
                     break
 
                 combined.append(nearest_seg)
@@ -266,11 +270,47 @@ class Stitcher:
         order = np.argsort(avgR)
         bands = np.array(bands)[order]
 
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+
+        band_segments = [Segment(b[0], b[1], imgNum=0, bandNum=0, identity=i) for i, b in enumerate(bands)]
+
+        band_groups = []
+        for b in band_segments:
+            ep = b.ep
+            others = [s for s in band_segments if s.identity != b.identity]
+            print(ep)
+            nearest_band, dr = self.getNearestSegment(b.ep, others, fraction=(1 / len(self.fns)))
+            print(dr)
+            if dr < 3.0:
+                contained = False
+                for g in band_groups:
+                    if b.identity in g:
+                        g.append(nearest_band.identity)
+                        contained = True
+                        break
+                    elif nearest_band.identity in g:
+                        g.append(b.identity)
+                        contained = True
+                        break
+                if not contained:
+                    band_groups.append([b.identity, nearest_band.identity])
+            else:
+                band_groups.append([b.identity])
+            ax.plot(b.phis, b.rs, lw=0.2)
+        print(band_groups)
+        max_group = max(band_groups, key=len)
+        max_bands = [b for b in band_segments if b.identity in max_group]
+        for b in max_bands:
+            # ax.plot(b.phis, b.rs, lw=0.2)
+            pass
+        fig.savefig('bands_debug.png', dpi=300)
+
         compP = np.empty(0)
         compR = np.empty(0)
-        for i, b in enumerate(bands):
-            compR = np.append(compR, b[1])
-            phi = b[0] + i * chirality * 2 * np.pi
+        for i, b in enumerate(max_bands):
+            compR = np.append(compR, b.rs)
+            phi = b.phis + i * chirality * 2 * np.pi
             compP = np.append(compP, phi)
         order = np.argsort(compP)
         compP = compP[order]
@@ -280,9 +320,9 @@ class Stitcher:
             compP = np.empty(0)
             compR = np.empty(0)
             chirality *= -1
-            for i, b in enumerate(bands):
-                compR = np.append(compR, b[1])
-                phi = b[0] + i * chirality * 2 * np.pi
+            for i, b in enumerate(max_bands):
+                compR = np.append(compR, b.rs)
+                phi = b.phis + i * chirality * 2 * np.pi
                 compP = np.append(compP, phi)
             order = np.argsort(compP)
             compP = compP[order]
@@ -291,9 +331,10 @@ class Stitcher:
         compP = chirality * compP[::chirality]
 
         self.startAngle = chirality * self.startAngle
+
         self.endAngle = (chirality * -1 + 1) * np.pi + (chirality * self.endAngle)
-        print(self.startAngle)
-        print(self.endAngle)
+        # print(self.startAngle)
+
         while True:
             self.endAngle += 2 * np.pi
             test_idx = np.argmax(compP > self.endAngle)
@@ -301,9 +342,10 @@ class Stitcher:
                 self.endAngle -= 2 * np.pi
                 end_idx = np.argmax(compP > self.endAngle)
                 break
+        print(len(compP))
+        print(end_idx)
 
         start_idx = np.argmax(compP > self.startAngle)
-
         if start_idx == 0:
             print('Unraveling Start Angle')
             self.startAngle += 2 * np.pi

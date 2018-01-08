@@ -87,7 +87,7 @@ class Image:
         thetaPlus_idx = int((thetaPlus + np.pi) / (2 * np.pi) * self.dimy)
         thetaMinus_idx = int((thetaMinus + np.pi) / (2 * np.pi) * self.dimy)
 
-        #c = tuple(midpoint)
+        # c = tuple(midpoint)
         cx, cy = midpoint
         c = (cx, cy)
 
@@ -136,7 +136,7 @@ class Image:
         # print('Coordinate transformation completed in ', str(round(time.time() - t0, 2)), 's')
         return transformed, angles, radii
 
-    def detectFeatures(self, matrix, plot=False):
+    def detectFeatures(self, matrix, thresh_std=.5, plot=False):
         """
         Distinguish band from background in binary matrix
 
@@ -156,7 +156,7 @@ class Image:
         """
         # t0 = time.time()
         start_range = 2000
-        end_range = np.shape(matrix)[1] - start_range
+        # end_range = np.shape(matrix)[1] - start_range
         # Initializing Empty array in Memory
         proc = np.empty(np.shape(matrix))
         start_search = np.empty(np.shape(matrix))[:, :start_range]
@@ -166,32 +166,41 @@ class Image:
         # Gaussian Blur to remove fast features
 
         cv2.GaussianBlur(src=matrix, ksize=(0, 3), dst=proc, sigmaX=3, sigmaY=0)
-        cv2.GaussianBlur(src=matrix[:, :start_range], ksize=(3, 0), dst=start_search, sigmaX=0, sigmaY=3)
+        # cv2.GaussianBlur(src=matrix[:, :start_range], ksize=(3, 0), dst=start_search, sigmaX=0, sigmaY=3)
 
-        cv2.GaussianBlur(src=matrix[:, start_range:], ksize=(3, 0), dst=end_search, sigmaX=0, sigmaY=1)
-
+        # cv2.GaussianBlur(src=matrix[:, start_range:], ksize=(31, 11), dst=end_search, sigmaX=0, sigmaY=0.1)
+        start_search = matrix[:, :start_range]
+        end_search = matrix[:, start_range:]
         # print('Convolving')
         # Convolving with Prewitt kernel in x-direction
         prewitt_kernel_x = np.array([[1, 0, -1], [1, 0, -1], [1, 0, -1]])
-        kernel_y_width = 30
+        kernel_y_width = 15
         prewitt_kernel_y = np.array([[1] * kernel_y_width, [0] *
                                      kernel_y_width, [-1] * kernel_y_width])
 
+        # prewitt_kernel_y_element = np.tile(np.ones(kernel_y_width), (15, 1))
+        # prewitt_kernel_y_end = np.concatenate((prewitt_kernel_y_element, np.zeros(15), -1 * prewitt_kernel_y_element))
         # print(prewitt_kernel_y_end)
-        cv2.threshold(src=start_search, dst=start_search, thresh=100, maxval=255, type=cv2.THRESH_TOZERO)
-        ndimage.minimum_filter(start_search, size=(15, 1), output=start_search)
+
+        # print(prewitt_kernel_y_end)
+        cv2.threshold(src=start_search, dst=start_search, thresh=20, maxval=255, type=cv2.THRESH_TOZERO)
+        ndimage.minimum_filter(start_search, size=(15, 15), output=start_search)
+        cv2.GaussianBlur(src=start_search, ksize=(11, 0), dst=start_search, sigmaX=0, sigmaY=5)
         cv2.filter2D(src=start_search, kernel=prewitt_kernel_y, dst=start_search, ddepth=-1)
 
         cv2.threshold(src=end_search, dst=end_search, thresh=20, maxval=255, type=cv2.THRESH_TOZERO)
-        ndimage.minimum_filter(end_search, size=(15, 1), output=end_search)
+        ndimage.minimum_filter(end_search, size=(15, 15), output=end_search)
+        cv2.GaussianBlur(src=end_search, ksize=(11, 11), dst=end_search, sigmaX=0, sigmaY=5)
         cv2.filter2D(src=end_search, kernel=prewitt_kernel_y, dst=end_search, ddepth=-1)
 
         cv2.filter2D(src=proc, kernel=prewitt_kernel_x, dst=proc, ddepth=-1)
+        cv2.GaussianBlur(src=proc, ksize=(11, 0), dst=proc, sigmaX=0, sigmaY=5)
 
         np.abs(start_search, out=start_search)
         np.abs(end_search, out=end_search)
 
         np.abs(proc, out=proc)
+        filtered = np.copy(proc)
 
         start_amp = start_search.max()
         start_idx = np.unravel_index(start_search.argmax(), start_search.shape)
@@ -204,27 +213,17 @@ class Image:
             ey += start_range
         end_idx = (ex, ey)
         end = (end_idx, end_amp)
-        del start_search
-        print(self.id)
-        print(end)
-        print()
-        # del end_search
-        # print('Thresholding')
 
-        # Threshold to 30% for noise reduction
-        #proc *= proc * (1.0 / proc.max())
-        # proc *= (1.0 / proc.max())
+        del start_search
+        del end_search
+        # print('Thresholding')
         proc_mean = np.mean(proc)
         proc_std = np.std(proc)
-        thresh = proc_mean + 0.1 * proc_std
-        #thresh = 0.1
-        cv2.threshold(src=proc, dst=proc, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
 
-        # print('Morphology')
-        # Increase Noise reduction through binary morphology
-        morph_kernel = np.ones((5, 5), np.uint8)
-        cv2.morphologyEx(src=proc, dst=proc, op=cv2.MORPH_OPEN, iterations=1, kernel=morph_kernel)
-        cv2.morphologyEx(src=proc, dst=proc, op=cv2.MORPH_CLOSE, iterations=1, kernel=morph_kernel)
+        thresh = proc_mean + thresh_std * proc_std
+        # thresh = proc_mean
+        # thresh = 0.1
+        cv2.threshold(src=proc, dst=proc, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
 
         proc = proc.astype(np.uint8, copy=False)
 
@@ -255,7 +254,7 @@ class Image:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.imshow(end_search)
+            ax.imshow(filtered)
             ax.set_aspect('auto')
             ax.set_xlabel('Radius [px]')
             ax.set_ylabel('Angle [idx]')

@@ -11,9 +11,9 @@ from pair import Pair
 def main():
     s = Sequence(offsite=True)
     s.prime()
-    pair = s.measure(n=16)
-    pair.store()
-    # pair = Pair('CSAT_LARGO.h5', fromFile=True, corrections=True)
+    #pair = s.measure(n=16)
+    # pair.store()
+    pair = Pair('CSAT_RD-OFFSITE.h5', fromFile=True, corrections=True)
     pair.plot()
     s.disable()
 

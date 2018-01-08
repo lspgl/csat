@@ -7,6 +7,7 @@ import time
 
 import numpy as np
 from scipy import optimize
+from scipy import ndimage
 
 import matplotlib.pyplot as plt
 from tools.colors import Colors as _C
@@ -44,7 +45,11 @@ class Pair:
         max_phis = []
         for i, e in enumerate(self.electrodes[:]):
             data = (np.abs(e.phis[::e.chirality]), e.rs[::e.chirality])
-            pnew, rnew = self.optimizeLinearity(data)
+            popt, ropt = self.optimizeLinearity(data)
+            pnew, rnew = self.smoothing((popt, ropt))
+            print(rnew)
+            print(pnew)
+            print()
             phiAbs = np.abs(pnew)
             npts = len(phiAbs)
             lengths.append(npts)
@@ -203,6 +208,35 @@ class Pair:
         phin += shift
 
         return (phin, rn)
+
+    def smoothing(self, data):
+        phis, rs = data
+        W = 10  # Window size
+        nrows = rs.size - W + 1
+        n = rs.strides[0]
+        a2D = np.lib.stride_tricks.as_strided(rs, shape=(nrows, W), strides=(n, n))
+        out = np.std(a2D, axis=1)
+        cutoff = np.argmax(out > 0.015)
+        rbase = rs[:cutoff]
+        rend = rs[cutoff:]
+
+        delta_base = rbase[:-1] - rbase[1:]
+        delta_base_std = np.std(delta_base)
+        delta_base_avg = np.mean(np.abs(delta_base))
+
+        smoothed_section = np.ones(len(rs) - cutoff) * rbase[-1]
+        last_true = 0
+        for i, pt in enumerate(rend[1:]):
+            if abs(pt - smoothed_section[i - 1]) < delta_base_avg + 3 * delta_base_std:
+                smoothed_section[i] = pt
+                last_true = i
+            else:
+                smoothed_section[i] = smoothed_section[i - 1]
+
+        fixed_r = np.append(rbase, smoothed_section[:last_true])
+        fixed_p = phis[:len(fixed_r)]
+
+        return fixed_p, fixed_r
 
     def plot(self):
         fig = plt.figure()
