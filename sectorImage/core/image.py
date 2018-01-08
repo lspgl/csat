@@ -43,7 +43,7 @@ class Image:
         else:
             # self.image = cv2.imread(self.fn, cv2.IMREAD_GRAYSCALE)
             self.image = np.load(self.fn_npy)
-        self.image = np.rot90(self.image)
+        # self.image = np.rot90(self.image)
         # print('Image loaded in', str(round(time.time() - t0, 2)), 's')
         self.dimensions = np.shape(self.image)
         self.dimy, self.dimx = self.dimensions

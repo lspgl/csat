@@ -13,7 +13,7 @@ def main():
     s.prime()
     #pair = s.measure(n=16)
     # pair.store()
-    pair = Pair('CSAT_RD-OFFSITE.h5', fromFile=True, corrections=True)
+    pair = Pair('CSAT_0.h5', fromFile=True, corrections=True)
     pair.plot()
     s.disable()
 

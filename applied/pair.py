@@ -33,8 +33,8 @@ class Pair:
         self.electrodes = sorted(electrodes, key=operator.attrgetter('chirality'))
         if self.electrodes[0].chirality == self.electrodes[1].chirality:
             raise Exception('Chirality Error')
-        self.correctMidpoint()
-        self.optimizeRotation()
+        # self.correctMidpoint()
+        # self.optimizeRotation()
         t = datetime.datetime.now()
         self.timestamp = (str(t.year) + '-' + str(t.month) + '-' + str(t.day) + '-' +
                           str(t.hour) + '-' + str(t.minute) + '-' + str(t.second))
@@ -217,37 +217,45 @@ class Pair:
         a2D = np.lib.stride_tricks.as_strided(rs, shape=(nrows, W), strides=(n, n))
         out = np.std(a2D, axis=1)
         cutoff = np.argmax(out > 0.015)
-        rbase = rs[:cutoff]
-        rend = rs[cutoff:]
+        if cutoff != 0:
+            rbase = rs[:cutoff]
+            rend = rs[cutoff:]
 
-        delta_base = rbase[:-1] - rbase[1:]
-        delta_base_std = np.std(delta_base)
-        delta_base_avg = np.mean(np.abs(delta_base))
+            delta_base = rbase[:-1] - rbase[1:]
+            delta_base_std = np.std(delta_base)
+            delta_base_avg = np.mean(np.abs(delta_base))
 
-        smoothed_section = np.ones(len(rs) - cutoff) * rbase[-1]
-        last_true = 0
-        for i, pt in enumerate(rend[1:]):
-            if abs(pt - smoothed_section[i - 1]) < delta_base_avg + 3 * delta_base_std:
-                smoothed_section[i] = pt
-                last_true = i
-            else:
-                smoothed_section[i] = smoothed_section[i - 1]
+            smoothed_section = np.ones(len(rs) - cutoff) * rbase[-1]
+            last_true = 0
+            for i, pt in enumerate(rend[1:]):
+                if abs(pt - smoothed_section[i - 1]) < delta_base_avg + 3 * delta_base_std:
+                    smoothed_section[i] = pt
+                    last_true = i
+                else:
+                    smoothed_section[i] = smoothed_section[i - 1]
 
-        fixed_r = np.append(rbase, smoothed_section[:last_true])
-        fixed_p = phis[:len(fixed_r)]
+            fixed_r = np.append(rbase, smoothed_section[:last_true])
+            fixed_p = phis[:len(fixed_r)]
 
-        return fixed_p, fixed_r
+            return fixed_p, fixed_r
+        else:
+            print('No smoothing necessary')
+            return phis, rs
 
     def plot(self):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         for i, e in enumerate(self.electrodes):
-            x = e.rs * np.cos(e.phis)
-            y = e.rs * np.sin(e.phis)
+            x = e.rs * np.cos(e.phis) / e.scale
+            y = e.rs * np.sin(e.phis) / e.scale
             ax.plot(x, y, color=plt.cm.viridis(i / 1.5), lw=0.8)
         ax.set_aspect('equal')
         ax.set_title('Combined Electrode')
         ax.set_xlabel('X [mm]')
         ax.set_ylabel('Y [mm]')
+        #ax.set_xlim([-22, 22])
+        #ax.set_ylim([-22, 22])
+        ax.set_xlim([-4000, 4000])
+        ax.set_ylim([-4000, 4000])
 
         fig.savefig(__location__ + '/data/plots/' + str(self.serial) + '.png', dpi=300)

@@ -279,9 +279,7 @@ class Stitcher:
         for b in band_segments:
             ep = b.ep
             others = [s for s in band_segments if s.identity != b.identity]
-            print(ep)
             nearest_band, dr = self.getNearestSegment(b.ep, others, fraction=(1 / len(self.fns)))
-            print(dr)
             if dr < 3.0:
                 contained = False
                 for g in band_groups:
@@ -298,7 +296,6 @@ class Stitcher:
             else:
                 band_groups.append([b.identity])
             ax.plot(b.phis, b.rs, lw=0.2)
-        print(band_groups)
         max_group = max(band_groups, key=len)
         max_bands = [b for b in band_segments if b.identity in max_group]
         for b in max_bands:
@@ -333,6 +330,9 @@ class Stitcher:
         self.startAngle = chirality * self.startAngle
 
         self.endAngle = (chirality * -1 + 1) * np.pi + (chirality * self.endAngle)
+
+        opening_angle = abs(self.startAngle - self.endAngle)
+        print('OPENING ANGLE:', opening_angle)
         # print(self.startAngle)
 
         while True:
@@ -342,8 +342,11 @@ class Stitcher:
                 self.endAngle -= 2 * np.pi
                 end_idx = np.argmax(compP > self.endAngle)
                 break
-        print(len(compP))
-        print(end_idx)
+        loss = len(compP) - end_idx
+
+        if loss > 1000:
+            print('Cutoff Loss Overflow:', loss)
+            end_idx = len(compP) - 1
 
         start_idx = np.argmax(compP > self.startAngle)
         if start_idx == 0:
@@ -352,6 +355,7 @@ class Stitcher:
             start_idx = np.argmax(compP > self.startAngle)
         # start_idx = 0
         # print(compP)
+
         compP = compP[start_idx:end_idx]
         compP -= compP[0]
         compP = chirality * compP[::chirality]

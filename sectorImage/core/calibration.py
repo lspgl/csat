@@ -67,7 +67,7 @@ class Calibrator:
         else:
             src = np.load(fn_npy)
 
-        src = np.rot90(src)
+        # src = np.rot90(src)
         # print('Image loaded in', str(round(time.time() - t0, 2)), 's')
         src = src.astype(np.uint8, copy=False)
         # print('Blurring')
