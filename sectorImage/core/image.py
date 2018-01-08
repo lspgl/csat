@@ -188,34 +188,66 @@ class Image:
 
         # print(prewitt_kernel_y_end)
         cv2.threshold(src=start_search, dst=start_search, thresh=20, maxval=255, type=cv2.THRESH_TOZERO)
-        ndimage.minimum_filter(start_search, size=(15, 15), output=start_search)
-        cv2.GaussianBlur(src=start_search, ksize=(11, 0), dst=start_search, sigmaX=0, sigmaY=5)
+        #ndimage.minimum_filter(start_search, size=(15, 15), output=start_search)
+        #cv2.GaussianBlur(src=start_search, ksize=(11, 0), dst=start_search, sigmaX=0, sigmaY=5)
+        cv2.GaussianBlur(src=start_search, ksize=(21, 21), dst=start_search, sigmaX=50, sigmaY=0)
         cv2.filter2D(src=start_search, kernel=prewitt_kernel_y, dst=start_search, ddepth=-1)
+        np.abs(start_search, out=start_search)
+        cv2.threshold(src=start_search, dst=start_search, thresh=100, maxval=1, type=cv2.THRESH_BINARY)
+        start_search = start_search.astype(np.uint8, copy=False)
+        n_labels, labels, l_stats, l_centroids = cv2.connectedComponentsWithStats(image=start_search, connectivity=4)
+        sizes = [s[-1] for s in l_stats]
+        sizes_original = sizes[:]
+        sizes.remove(max(sizes))
+        if len(sizes) == 0:
+            start_amp = 0
+            start_centroid = (0, 0)
+        else:
+            start_amp = max(sizes)
+            start_centroid_idx = sizes_original.index(start_amp)
+            start_centroid = (int(l_centroids[start_centroid_idx][1]), int(l_centroids[start_centroid_idx][0]))
 
         cv2.threshold(src=end_search, dst=end_search, thresh=20, maxval=255, type=cv2.THRESH_TOZERO)
-        ndimage.minimum_filter(end_search, size=(15, 15), output=end_search)
-        cv2.GaussianBlur(src=end_search, ksize=(11, 11), dst=end_search, sigmaX=0, sigmaY=5)
+        #ndimage.minimum_filter(end_search, size=(15, 15), output=end_search)
+        #cv2.GaussianBlur(src=end_search, ksize=(11, 11), dst=end_search, sigmaX=0, sigmaY=5)
+        cv2.GaussianBlur(src=end_search, ksize=(21, 21), dst=end_search, sigmaX=50, sigmaY=0)
         cv2.filter2D(src=end_search, kernel=prewitt_kernel_y, dst=end_search, ddepth=-1)
+        np.abs(end_search, out=end_search)
+        cv2.threshold(src=end_search, dst=end_search, thresh=100, maxval=1, type=cv2.THRESH_BINARY)
+        end_search = end_search.astype(np.uint8, copy=False)
+        n_labels, labels, l_stats, l_centroids = cv2.connectedComponentsWithStats(image=end_search, connectivity=4)
+        sizes = [s[-1] for s in l_stats]
+        sizes_original = sizes[:]
+        sizes.remove(max(sizes))
+        if len(sizes) == 0:
+            end_amp = 0
+            end_centroid = (0, 0)
+        else:
+            end_amp = max(sizes)
+            end_centroid_idx = sizes_original.index(end_amp)
+            end_centroid = (int(l_centroids[end_centroid_idx][1]), int(l_centroids[end_centroid_idx][0]) + start_range)
 
         cv2.filter2D(src=proc, kernel=prewitt_kernel_x, dst=proc, ddepth=-1)
         cv2.GaussianBlur(src=proc, ksize=(11, 3), dst=proc, sigmaX=0, sigmaY=5)
 
-        np.abs(start_search, out=start_search)
-        np.abs(end_search, out=end_search)
-
         np.abs(proc, out=proc)
 
-        start_amp = start_search.max()
-        start_idx = np.unravel_index(start_search.argmax(), start_search.shape)
-        start = (start_idx, start_amp)
+        #start_amp = start_search.max()
+        #start_idx = np.unravel_index(start_search.argmax(), start_search.shape)
+        start = (start_centroid, start_amp)
 
-        end_amp = end_search.max()
-        end_idx = np.unravel_index(end_search.argmax(), end_search.shape)
-        ex, ey = end_idx
-        if ey != 0:
-            ey += start_range
-        end_idx = (ex, ey)
-        end = (end_idx, end_amp)
+        # end_amp = end_search.max()
+        # end_idx = np.unravel_index(end_search.argmax(), end_search.shape)
+        #ex, ey = end_idx
+        # if ey != 0:
+        #    ey += start_range
+        #end_idx = (ex, ey)
+        end = (end_centroid, end_amp)
+
+        print(self.id)
+        print(start)
+        print(end)
+        print()
 
         del start_search
         del end_search
@@ -260,7 +292,9 @@ class Image:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.imshow(filtered)
+            # ax.imshow(filtered)
+            ax.imshow(start_search)
+
             # ax.plot(filtered[0])
             ax.set_aspect('auto')
             ax.set_xlabel('Radius [px]')
