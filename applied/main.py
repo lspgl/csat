@@ -9,11 +9,11 @@ from pair import Pair
 
 
 def main():
-    s = Sequence(offsite=True)
+    s = Sequence(offsite=False)
     s.prime()
     pair = s.measure(n=16)
     pair.store()
-    # pair = Pair('CSAT_0.h5', fromFile=True, corrections=True)
+    #pair = Pair('CSAT_2.h5', fromFile=True, corrections=True)
     pair.plot()
     s.disable()
 
