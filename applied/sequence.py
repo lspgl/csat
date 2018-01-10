@@ -24,6 +24,7 @@ from sectorImage.combinedSequence import CombinedSequence
 import h5py
 import numpy as np
 import datetime
+import copy
 
 
 class Sequence:
@@ -176,15 +177,20 @@ class Sequence:
 
     def measureOffsite(self, n=16, directory1='hardware/positive', directory2='hardware/negative'):
         serial = 'RD-OFFSITE'
-        print(_C.CYAN + _C.BOLD + 'Evaluating electrode 1' + _C.ENDC)
-        spiral, calibration = CombinedSequence(n=n, directory=directory1, env=env)
-        electrode1 = Electrode(serial, spiral, calibration)
-        # sys.exit()
-        print(_C.CYAN + _C.BOLD + 'Evaluating electrode 2' + _C.ENDC)
-        spiral, calibration = CombinedSequence(n=n, directory=directory2, env=env)
-        electrode2 = Electrode(serial, spiral, calibration)
+        directories = [directory1, directory2]
+        electrodes = []
+        for i in range(2):
+            print(_C.CYAN + _C.BOLD + 'Evaluating electrode ' + str(i + 1) + _C.ENDC)
+            spiral, calibration = CombinedSequence(n=n, directory=directories[i], env=env)
+            localElectrode = Electrode(serial, spiral, calibration)
+            electrodes.append(copy.copy(localElectrode))
 
-        pair = Pair(env=env, electrodes=(electrode1, electrode2), serial=serial)
+        # sys.exit()
+        #print(_C.CYAN + _C.BOLD + 'Evaluating electrode 2' + _C.ENDC)
+        #spiral, calibration = CombinedSequence(n=n, directory=directory2, env=env)
+        #electrode2 = Electrode(serial, spiral, calibration)
+
+        pair = Pair(env=env, electrodes=tuple(electrodes), serial=serial)
         return pair
 
     def calib_iter(self, n, n_iter):
