@@ -188,11 +188,10 @@ class Image:
 
         # print(prewitt_kernel_y_end)
         cv2.threshold(src=start_search, dst=start_search, thresh=20, maxval=255, type=cv2.THRESH_TOZERO)
-        #ndimage.minimum_filter(start_search, size=(15, 15), output=start_search)
-        #cv2.GaussianBlur(src=start_search, ksize=(11, 0), dst=start_search, sigmaX=0, sigmaY=5)
         cv2.GaussianBlur(src=start_search, ksize=(21, 21), dst=start_search, sigmaX=50, sigmaY=0)
         cv2.filter2D(src=start_search, kernel=prewitt_kernel_y, dst=start_search, ddepth=-1)
         np.abs(start_search, out=start_search)
+        filtered = np.copy(start_search)
         cv2.threshold(src=start_search, dst=start_search, thresh=100, maxval=1, type=cv2.THRESH_BINARY)
         start_search = start_search.astype(np.uint8, copy=False)
         n_labels, labels, l_stats, l_centroids = cv2.connectedComponentsWithStats(image=start_search, connectivity=4)
@@ -208,8 +207,6 @@ class Image:
             start_centroid = (int(l_centroids[start_centroid_idx][1]), int(l_centroids[start_centroid_idx][0]))
 
         cv2.threshold(src=end_search, dst=end_search, thresh=20, maxval=255, type=cv2.THRESH_TOZERO)
-        #ndimage.minimum_filter(end_search, size=(15, 15), output=end_search)
-        #cv2.GaussianBlur(src=end_search, ksize=(11, 11), dst=end_search, sigmaX=0, sigmaY=5)
         cv2.GaussianBlur(src=end_search, ksize=(21, 21), dst=end_search, sigmaX=50, sigmaY=0)
         cv2.filter2D(src=end_search, kernel=prewitt_kernel_y, dst=end_search, ddepth=-1)
         np.abs(end_search, out=end_search)
@@ -249,7 +246,7 @@ class Image:
         print(end)
         print()
 
-        del start_search
+        # del start_search
         del end_search
         # print('Thresholding')
         proc_mean = np.mean(proc)
@@ -286,14 +283,14 @@ class Image:
 
         # Combine foreground noise with with thresholded image
         cv2.bitwise_or(src1=proc, src2=labels, dst=proc)
-        filtered = np.copy(proc)
-        # plot = True
+        # filtered = np.copy(proc)
+        plot = True
         if plot:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            # ax.imshow(filtered)
-            ax.imshow(start_search)
+            ax.imshow(filtered)
+            # ax.imshow(start_search)
 
             # ax.plot(filtered[0])
             ax.set_aspect('auto')
