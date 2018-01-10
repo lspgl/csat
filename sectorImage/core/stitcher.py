@@ -102,17 +102,18 @@ class Stitcher:
         for i, image in enumerate(self.images[::-1]):
             if image.start[1] > ampstart:
                 pstart = image.angles[image.start[0][0]] + (i * 2 * np.pi / len(self.fns))
-                #pstart = image.angles[image.start[0][0]] + dt[i]
+                rstart = image.radii[image.start[0][1]]
                 ampstart = image.start[1]
+                idstart = i + 1
             if image.end[1] > ampend:
                 pend = image.angles[image.end[0][0]] + (i * 2 * np.pi / len(self.fns))
+                rend = image.radii[image.end[0][1]]
                 ampend = image.end[1]
+                idend = i + 1
 
             for j, coord in enumerate(zip(image.r, image.phi)):
                 rs, phis = coord
                 phis = image.angles[np.array(phis)] + (i * 2 * np.pi / len(self.fns))
-                # phis = image.angles[np.array(phis)] + (i * (np.pi - 2.75663253596))
-                #phis = image.angles[np.array(phis)] + dt[i]
                 rs = image.radii[np.array(rs)]
                 dr = rs[:-1] - rs[1:]
                 # std = np.std(dr)
@@ -122,11 +123,15 @@ class Stitcher:
                     segments.append(s)
                     if plot:
                         ax.plot(phis, rs, lw=0.2)
-                    # ax.plot(rs * np.cos(phis), rs * np.sin(phis), lw=0.2)
-            # segments.append(img_segs)
-        # self.startAngle = (2 * np.pi) - pstart
+
         self.startAngle = pstart
+        self.startRadius = rstart
+        self.idstart = idstart
+
         self.endAngle = pend
+        self.endRadius = rend
+        self.idend = idend
+
         if plot:
             # ax.set_aspect('equal')
             ax.set_xlabel('Angle [rad]')
@@ -355,6 +360,27 @@ class Stitcher:
             start_idx = np.argmax(compP > self.startAngle)
         # start_idx = 0
         # print(compP)
+
+        dr_start = abs(compR[::chirality][start_idx] / scale - self.startRadius)
+        dr_end = abs(compR[::chirality][end_idx] / scale - self.endRadius)
+
+        if max(dr_start, dr_end) > 0.5 * pitch:
+            print('!!!!!!!!!!!!!!!!!!')
+            print('Band Start Metric:')
+            print('r:', self.startRadius)
+            print('t:', self.startAngle % (2 * np.pi))
+            print('dr:', dr_start)
+            print('id:', self.idstart)
+            print('------------------')
+            print('Band End Metric:')
+            print('r:', self.endRadius)
+            print('t:', self.endAngle % (2 * np.pi))
+            print('dr:', dr_end)
+            print('id:', self.idend)
+            print('------------------')
+            print('Pitch Threshold (x0.5):', pitch)
+            print('!!!!!!!!!!!!!!!!!!')
+            raise Exception('Band Cutoff Mismatch')
 
         compP = compP[start_idx:end_idx]
         compP -= compP[0]
