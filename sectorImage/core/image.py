@@ -118,11 +118,11 @@ class Image:
         calib_width_mm = env.calib_width_mm * tolerance  # Width of the calibration piece
         # pitch_mm = self.env.pitch_mm  # Nominal electrode pitch
         scale = calib_size_mm / calib_size_px
-        calibrationCutoff = (calib_size_mm - calib_width_mm) / scale * r / rmax
+        self.calibrationCutoff = (calib_size_mm - calib_width_mm) / scale * r / rmax
         # pitch = pitch_mm / scale
-        transformed[:, int(calibrationCutoff):] = 0
+        transformed[:, int(self.calibrationCutoff):] = 0
         for i in range(len(transformed)):
-            transformed[i][transformed[i] == 0] = transformed[i, int(calibrationCutoff) - 1]
+            transformed[i][transformed[i] == 0] = transformed[i, int(self.calibrationCutoff) - 1]
 
         # plot = True
 
@@ -165,13 +165,13 @@ class Image:
         # print('Blurring')
         # Gaussian Blur to remove fast features
 
-        cv2.GaussianBlur(src=matrix, ksize=(15, 3), dst=proc, sigmaX=1.5, sigmaY=10)
-        ndimage.maximum_filter(proc, size=(5, 15), output=proc)
+        cv2.GaussianBlur(src=matrix, ksize=(15, 3), dst=proc, sigmaX=1.5, sigmaY=5)
+        # ndimage.maximum_filter(proc, size=(5, 5), output=proc)
         # cv2.GaussianBlur(src=matrix[:, :start_range], ksize=(3, 0), dst=start_search, sigmaX=0, sigmaY=3)
 
         # cv2.GaussianBlur(src=matrix[:, start_range:], ksize=(31, 11), dst=end_search, sigmaX=0, sigmaY=0.1)
         start_search = matrix[:, :start_range]
-        end_search = matrix[:, start_range:]
+        end_search = matrix[:, start_range:int(self.calibrationCutoff)]
         # print('Convolving')
         # Convolving with Prewitt kernel in x-direction
         prewitt_kernel_x = np.tile([-1, 0, 1], (15, 1))
@@ -191,8 +191,7 @@ class Image:
         cv2.GaussianBlur(src=start_search, ksize=(21, 21), dst=start_search, sigmaX=50, sigmaY=0)
         cv2.filter2D(src=start_search, kernel=prewitt_kernel_y, dst=start_search, ddepth=-1)
         np.abs(start_search, out=start_search)
-        filtered = np.copy(start_search)
-        cv2.threshold(src=start_search, dst=start_search, thresh=100, maxval=1, type=cv2.THRESH_BINARY)
+        cv2.threshold(src=start_search, dst=start_search, thresh=80, maxval=1, type=cv2.THRESH_BINARY)
         start_search = start_search.astype(np.uint8, copy=False)
         n_labels, labels, l_stats, l_centroids = cv2.connectedComponentsWithStats(image=start_search, connectivity=4)
         sizes = [s[-1] for s in l_stats]
@@ -210,7 +209,7 @@ class Image:
         cv2.GaussianBlur(src=end_search, ksize=(21, 21), dst=end_search, sigmaX=50, sigmaY=0)
         cv2.filter2D(src=end_search, kernel=prewitt_kernel_y, dst=end_search, ddepth=-1)
         np.abs(end_search, out=end_search)
-        cv2.threshold(src=end_search, dst=end_search, thresh=100, maxval=1, type=cv2.THRESH_BINARY)
+        cv2.threshold(src=end_search, dst=end_search, thresh=80, maxval=1, type=cv2.THRESH_BINARY)
         end_search = end_search.astype(np.uint8, copy=False)
         n_labels, labels, l_stats, l_centroids = cv2.connectedComponentsWithStats(image=end_search, connectivity=4)
         sizes = [s[-1] for s in l_stats]
@@ -225,7 +224,8 @@ class Image:
             end_centroid = (int(l_centroids[end_centroid_idx][1]), int(l_centroids[end_centroid_idx][0]) + start_range)
 
         cv2.filter2D(src=proc, kernel=prewitt_kernel_x, dst=proc, ddepth=-1)
-        cv2.GaussianBlur(src=proc, ksize=(11, 3), dst=proc, sigmaX=0, sigmaY=5)
+        # ndimage.maximum_filter(proc, size=(5, 5), output=proc)
+        # cv2.GaussianBlur(src=proc, ksize=(11, 3), dst=proc, sigmaX=0, sigmaY=5)
 
         np.abs(proc, out=proc)
 
@@ -256,8 +256,17 @@ class Image:
         thresh = 50.0
         # thresh = proc_mean
         # thresh = 0.1
+        #proc = proc * 255 / np.max(proc)
 
         cv2.threshold(src=proc, dst=proc, thresh=thresh, maxval=1, type=cv2.THRESH_BINARY)
+
+        # cv2.adaptiveThreshold(src=proc,
+        #                      dst=proc,
+        #                      maxValue=1,
+        #                      thresholdType=cv2.THRESH_BINARY,
+        #                      adaptiveMethod=cv2.ADAPTIVE_THRESH_MEAN_C,
+        #                      blockSize=1001,
+        #                      C=0)
 
         proc = proc.astype(np.uint8, copy=False)
 
@@ -283,14 +292,21 @@ class Image:
 
         # Combine foreground noise with with thresholded image
         cv2.bitwise_or(src1=proc, src2=labels, dst=proc)
-        # filtered = np.copy(proc)
-        plot = True
+
+        Morphkernel = np.ones((11, 11), np.uint8)
+        cv2.dilate(proc, Morphkernel, proc)
+        cv2.erode(proc, Morphkernel, proc)
+
+        filtered = np.copy(proc)
+
+        # plot = True
         if plot:
             print('Plotting')
             fig = plt.figure()
             ax = fig.add_subplot(111)
             ax.imshow(filtered)
-            # ax.imshow(start_search)
+            # ax.plot(filtered[0], lw=0.2)
+            # ax.imshow(end_search)
 
             # ax.plot(filtered[0])
             ax.set_aspect('auto')
