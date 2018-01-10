@@ -13,8 +13,9 @@ def main():
     s.prime()
     pair = s.measure(n=16)
     pair.store()
-    # pair = Pair('CSAT_0.h5', fromFile=True, corrections=True)
-    pair.plot()
+    # for i in range(16):
+    #    pair = Pair('CSAT_' + str(i + 1) + '.h5', fromFile=True, corrections=True)
+    #    pair.plot()
     s.disable()
 
 
