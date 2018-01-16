@@ -153,26 +153,25 @@ class Sequence:
         serial = input(_C.YEL +
                        'Insert 1st electrode with calibration ring and scan serial: ' +
                        _C.ENDC)
-        t0 = time.time()
-        CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
-        print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
-        spiral, calibration = CombinedSequence(n=n, directory='hardware/combined', env=env)
-        print(_C.CYAN + _C.BOLD + 'Measurement completed in ' + str(round(time.time() - t0, 2)) + 's' + _C.ENDC)
-        electrode1 = Electrode(serial, spiral, calibration)
+        electrodes = []
+        times = []
+        for i in range(2):
+            if i == 1:
+                input(_C.YEL + 'Insert 2nd electrode with calibration and press [Enter]')
+            t0 = time.time()
+            CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
+            print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
+            spiral, calibration = CombinedSequence(n=n, directory='hardware/combined', env=env)
+            print(_C.CYAN + _C.BOLD + 'Measurement completed in ' + str(round(time.time() - t0, 2)) + 's' + _C.ENDC)
 
-        t1 = time.time()
-        input(_C.YEL + 'Insert 2nd electrode with calibration and press [Enter]')
-        t2 = time.time()
-        input_time = t2 - t1
-        CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
-        print(_C.CYAN + _C.BOLD + 'Evaluating electrode' + _C.ENDC)
-        spiral, calibration = CombinedSequence(n=n, directory='hardware/combined', env=env)
-        print(_C.CYAN + _C.BOLD + 'Measurement completed in ' + str(round(time.time() - t2, 2)) + 's' + _C.ENDC)
+            localElectrode = Electrode(serial, spiral, calibration)
+            electrodes.append(copy.copy(localElectrode))
+            times.append(time.time() - t0)
+
         print(_C.CYAN + _C.BOLD + 'Pair completed in ' +
-              str(round(time.time() - t0 - input_time, 2)) + 's' + _C.ENDC)
-        electrode2 = Electrode(serial, spiral, calibration)
+              str(round(sum(times), 2)) + 's' + _C.ENDC)
 
-        pair = Pair(env=env, electrodes=(electrode1, electrode2), serial=serial)
+        pair = Pair(env=env, electrodes=tuple(electrodes), serial=serial)
         return pair
 
     def measureOffsite(self, n=16, directory1='hardware/positive', directory2='hardware/negative'):
