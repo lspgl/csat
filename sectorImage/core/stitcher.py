@@ -350,8 +350,9 @@ class Stitcher:
         loss = len(compP) - end_idx
 
         if loss > 1000:
-            print('Cutoff Loss Overflow:', loss)
-            end_idx = len(compP) - 1
+            #print('Cutoff Loss Overflow:', loss)
+            raise Exception('Cutoff Loss Overflow ' + str(loss))
+            #end_idx = len(compP) - 1
 
         start_idx = np.argmax(compP > self.startAngle)
         if start_idx == 0:
