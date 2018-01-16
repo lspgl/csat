@@ -249,10 +249,10 @@ class Image:
         # del start_search
         del end_search
         # print('Thresholding')
-        proc_mean = np.mean(proc)
-        proc_std = np.std(proc)
+        # proc_mean = np.mean(proc)
+        # proc_std = np.std(proc)
 
-        thresh = proc_mean + thresh_std * proc_std
+        # thresh = proc_mean + thresh_std * proc_std
         thresh = 50.0
         # thresh = proc_mean
         # thresh = 0.1
