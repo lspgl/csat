@@ -11,13 +11,27 @@ import traceback
 
 
 def main():
-    s = Sequence(offsite=True)
+    if ('-s' in sys.argv) or ('--single' in sys.argv):
+        continuous = False
+    else:
+        continuous = True
+
+    if ('-c' in sys.argv) or ('--corrections' in sys.argv):
+        corrections = True
+    else:
+        corrections = False
+
+    if '--offsite' in sys.argv:
+        offsite = True
+    else:
+        offsite = False
+
+    s = Sequence(offsite=offsite)
     s.prime()
-    continuous = False
     if continuous:
         while True:
             try:
-                pair = s.measure(n=16)
+                pair = s.measure(n=16, corrections=corrections)
                 pair.store()
                 del pair
             except KeyboardInterrupt:
@@ -28,11 +42,9 @@ def main():
                 s.disable()
                 traceback.print_exc()
     else:
-        pair = s.measure(n=16)
+        pair = s.measure(n=16, corrections=corrections)
         pair.store()
-    # for i in range(16):
-    #    pair = Pair('CSAT_' + str(i + 1) + '.h5', fromFile=True, corrections=True)
-    #    pair.plot()
+
     s.disable()
 
 
