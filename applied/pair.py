@@ -27,14 +27,15 @@ class Pair:
         else:
             self.load(*args, **kwargs)
 
-    def initializeFromMeasurement(self, env, electrodes, serial):
+    def initializeFromMeasurement(self, env, electrodes, serial, corrections=False):
         self.serial = serial
         self.env = env
         self.electrodes = sorted(electrodes, key=operator.attrgetter('chirality'))
         if self.electrodes[0].chirality == self.electrodes[1].chirality:
             raise Exception('Chirality Error')
-        # self.correctMidpoint()
-        # self.optimizeRotation()
+        if corrections:
+            self.correctMidpoint()
+            self.optimizeRotation()
         t = datetime.datetime.now()
         self.timestamp = (str(t.year) + '-' + str(t.month) + '-' + str(t.day) + '-' +
                           str(t.hour) + '-' + str(t.minute) + '-' + str(t.second))
