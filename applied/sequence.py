@@ -147,8 +147,40 @@ class Sequence:
         stitcher = EvaluationSequence(n=n, directory=directory)
         return stitcher
 
+    def robustnessTest(self, n=16, n_iter=50):
+        electrodes = []
+        serial = 'RND-ROBUSTNESS'
+        for i in range(n_iter):
+            print('Iteration:', i + 1)
+            CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
+            spiral, calibration = CombinedSequence(n=n, directory='hardware/combined', env=env)
+            localElectrode = Electrode(serial, spiral, calibration)
+            electrodes.append(copy.copy(localElectrode))
+
+        t = datetime.datetime.now()
+        timestamp = (str(t.year) + '-' + str(t.month) + '-' + str(t.day) + '-' +
+                     str(t.hour) + '-' + str(t.minute) + '-' + str(t.second))
+        attributes = {'serial': serial,
+                      'timestamp': timestamp,
+                      'calib size': env.calib_size_mm,
+                      'calib width': env.calib_width_mm,
+                      }
+
+        fn = 'CSAT_ROBUSTNESS.h5'
+        with h5py.File(__location__ + '/data/' + fn, 'w') as f:
+            for key in attributes:
+                f.attrs[key] = attributes[key]
+            for i, e in enumerate(electrodes):
+                gname = 'ITER_' + str(i + 1)
+                g = f.create_group(gname)
+                g.create_dataset('spiral', data=[e.phis, e.rs])
+                g.attrs['Scale'] = e.scale
+                g.create_dataset('calibration', data=e.calibration)
+
+        return electrodes
+
     @_requiresPrimed
-    def measure(self, n=16):
+    def measure(self, n=16, corrections=False):
 
         serial = input(_C.YEL +
                        'Insert 1st electrode with calibration ring and scan serial: ' +
@@ -171,10 +203,10 @@ class Sequence:
         print(_C.CYAN + _C.BOLD + 'Pair completed in ' +
               str(round(sum(times), 2)) + 's' + _C.ENDC)
 
-        pair = Pair(env=env, electrodes=tuple(electrodes), serial=serial)
+        pair = Pair(env=env, electrodes=tuple(electrodes), serial=serial, corrections=corrections)
         return pair
 
-    def measureOffsite(self, n=16, directory1='hardware/positive', directory2='hardware/negative'):
+    def measureOffsite(self, n=16, directory1='hardware/positive', directory2='hardware/negative', corrections=False):
         serial = 'RD-OFFSITE'
         directories = [directory1, directory2]
         electrodes = []
@@ -185,11 +217,11 @@ class Sequence:
             electrodes.append(copy.copy(localElectrode))
 
         # sys.exit()
-        #print(_C.CYAN + _C.BOLD + 'Evaluating electrode 2' + _C.ENDC)
-        #spiral, calibration = CombinedSequence(n=n, directory=directory2, env=env)
-        #electrode2 = Electrode(serial, spiral, calibration)
+        # print(_C.CYAN + _C.BOLD + 'Evaluating electrode 2' + _C.ENDC)
+        # spiral, calibration = CombinedSequence(n=n, directory=directory2, env=env)
+        # electrode2 = Electrode(serial, spiral, calibration)
 
-        pair = Pair(env=env, electrodes=tuple(electrodes), serial=serial)
+        pair = Pair(env=env, electrodes=tuple(electrodes), serial=serial, corrections=corrections)
         return pair
 
     def calib_iter(self, n, n_iter):

@@ -48,9 +48,6 @@ class Pair:
             data = (np.abs(e.phis[::e.chirality]), e.rs[::e.chirality])
             popt, ropt = self.optimizeLinearity(data)
             pnew, rnew = self.smoothing((popt, ropt))
-            print(rnew)
-            print(pnew)
-            print()
             phiAbs = np.abs(pnew)
             npts = len(phiAbs)
             lengths.append(npts)
@@ -169,11 +166,17 @@ class Pair:
         minFine = scanRangeFine[np.argmin(stdsFine)]
         self.electrodes[1].phis += minFine
         self.computeGaps(shift=0, opt=False, plot=True)
+        plot = True
         if plot:
-            fig = plt.figure()
+            fig = plt.figure(figsize=(8, 4))
             ax = fig.add_subplot(111)
-            ax.plot(scanRange, stds)
-            ax.plot(scanRangeFine, stdsFine)
+            ax.plot(scanRange, stds, lw=1, color=plt.cm.viridis(0.7))
+            ax.axvline(x=minCoarse, ls='-.', color=plt.cm.viridis(0.7))
+            ax.plot(scanRangeFine, stdsFine, lw=1, color=plt.cm.viridis(0))
+            ax.axvline(x=minFine, ls='-.', color=plt.cm.viridis(0))
+            ax.set_xlabel('Shift Angle [rad]')
+            ax.set_ylabel('Gap STD [mm]')
+            plt.gcf().subplots_adjust(bottom=0.15)
             fig.savefig('shiftDebug.png', dpi=300)
 
     def optimizeLinearity(self, data, coverage=0.9):

@@ -28,6 +28,7 @@ def main():
     sysargs.extend(['--offsite'])
     if '--offsite' in sys.argv:
         offsite = True
+        continuous = False
     else:
         offsite = False
 
