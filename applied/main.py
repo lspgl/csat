@@ -11,20 +11,36 @@ import traceback
 
 
 def main():
+    sysargs = []
+
+    sysargs.extend(['-s', '--single'])
     if ('-s' in sys.argv) or ('--single' in sys.argv):
         continuous = False
     else:
         continuous = True
 
+    sysargs.extend(['-c', '--corrections'])
     if ('-c' in sys.argv) or ('--corrections' in sys.argv):
         corrections = True
     else:
         corrections = False
 
+    sysargs.extend(['--offsite'])
     if '--offsite' in sys.argv:
         offsite = True
     else:
         offsite = False
+
+    if len(sys.argv) > 1:
+        for arg in sys.argv[1:]:
+            if arg not in sysargs:
+                print('Valid sysargs:')
+                [print(a) for a in sysargs]
+                print()
+                print('Supplied sysargs:')
+                [print(a) for a in sys.argv[1:]]
+                print()
+                raise Exception('Invalid Sysarg')
 
     s = Sequence(offsite=offsite)
     s.prime()
