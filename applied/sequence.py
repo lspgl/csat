@@ -26,6 +26,8 @@ import numpy as np
 import datetime
 import copy
 
+import traceback
+
 
 class Sequence:
 
@@ -97,6 +99,7 @@ class Sequence:
         print(_C.CYAN + _C.BOLD + 'Priming camera and stepper' + _C.ENDC)
         # self.cam.fireSeries(n=3)
         self.stp.enable()
+        time.sleep(0.1)
         if self.stp.enabled:
             print(_C.LIME + 'System ready' + _C.ENDC)
             self.primed = True
@@ -151,11 +154,14 @@ class Sequence:
         electrodes = []
         serial = 'RND-ROBUSTNESS'
         for i in range(n_iter):
-            print('Iteration:', i + 1)
-            CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
-            spiral, calibration = CombinedSequence(n=n, directory='hardware/combined', env=env)
-            localElectrode = Electrode(serial, spiral, calibration)
-            electrodes.append(copy.copy(localElectrode))
+            try:
+                print('Iteration:', i + 1)
+                CoupledCapture(n=n, directory='combined', stp=self.stp, cam=self.cam)
+                spiral, calibration = CombinedSequence(n=n, directory='hardware/combined', env=env)
+                localElectrode = Electrode(serial, spiral, calibration)
+                electrodes.append(copy.copy(localElectrode))
+            except:
+                traceback.print_exc()
 
         t = datetime.datetime.now()
         timestamp = (str(t.year) + '-' + str(t.month) + '-' + str(t.day) + '-' +

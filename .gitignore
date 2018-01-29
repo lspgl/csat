@@ -4,6 +4,7 @@
 *.npz
 *.bak
 *.npy
+*.zip
 .DS_Store
 sectorImage/img/out/*.png
 *cpt*.jpg

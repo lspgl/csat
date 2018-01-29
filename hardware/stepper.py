@@ -132,5 +132,6 @@ class Stepper:
 if __name__ == '__main__':
     stepper = Stepper()
     stepper.enable()
-    stepper.discreteRotation(8)
+    time.sleep(0.1)
+    stepper.continuousRotation(t=2)
     stepper.disable()

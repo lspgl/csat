@@ -10,7 +10,7 @@ from sequence import Sequence
 def main():
     s = Sequence(offsite=False)
     s.prime()
-    s.robustnessTest()
+    s.robustnessTest(n_iter=50)
     s.disable()
 
 
