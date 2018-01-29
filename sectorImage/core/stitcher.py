@@ -286,6 +286,7 @@ class Stitcher:
             others = [s for s in band_segments if s.identity != b.identity]
             # nearest_band, dr = self.getNearestSegment(b.ep, others, fraction=(1 / len(self.fns)))
             nearest_band, dr = self.getNearestSegment(b.ep, others)
+            print(dr)
             if dr < 10.0:
                 contained = False
                 for g in band_groups:

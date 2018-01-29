@@ -269,6 +269,9 @@ class Image:
         #                      C=0)
 
         proc = proc.astype(np.uint8, copy=False)
+        Morphkernel = np.ones((11, 11), np.uint8)
+        cv2.dilate(proc, Morphkernel, proc)
+        cv2.erode(proc, Morphkernel, proc)
 
         # print('Connecting')
         # Label the complement regions of the binary image
@@ -292,12 +295,10 @@ class Image:
 
         # Combine foreground noise with with thresholded image
         cv2.bitwise_or(src1=proc, src2=labels, dst=proc)
-
-        Morphkernel = np.ones((11, 11), np.uint8)
-        cv2.dilate(proc, Morphkernel, proc)
-        cv2.erode(proc, Morphkernel, proc)
-
         filtered = np.copy(proc)
+        #Morphkernel = np.ones((11, 11), np.uint8)
+        #cv2.dilate(proc, Morphkernel, proc)
+        #cv2.erode(proc, Morphkernel, proc)
 
         # plot = True
         if plot:

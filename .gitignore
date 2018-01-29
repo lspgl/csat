@@ -11,7 +11,7 @@ sectorImage/img/out/*.png
 hardware/*.jpg
 hardware/shielded
 *.h5
-applied/data/plots/**/*.png
+applied/data/**/*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
