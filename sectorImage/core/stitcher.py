@@ -146,7 +146,7 @@ class Stitcher:
 
     def getNearestSegment(self, refPoint, segments, fraction=1):
         r0 = refPoint[1]
-        dr_min = np.array([np.min(np.abs(s.rs[:int(fraction * (len(s.rs) - 1))] - r0)) for s in segments])
+        dr_min = np.array([np.min(np.abs(s.rs[:int(fraction * (len(s.rs)))] - r0)) for s in segments])
         return segments[np.argmin(dr_min)], np.min(dr_min)
 
     def combineSegments(self, segments, plot=False):
@@ -284,8 +284,8 @@ class Stitcher:
         for b in band_segments:
             ep = b.ep
             others = [s for s in band_segments if s.identity != b.identity]
-            nearest_band, dr = self.getNearestSegment(b.ep, others, fraction=(1 / len(self.fns)))
-            print(dr)
+            # nearest_band, dr = self.getNearestSegment(b.ep, others, fraction=(1 / len(self.fns)))
+            nearest_band, dr = self.getNearestSegment(b.ep, others)
             if dr < 10.0:
                 contained = False
                 for g in band_groups:
@@ -317,7 +317,6 @@ class Stitcher:
             compP = np.append(compP, phi)
         order = np.argsort(compP)
         compP = compP[order]
-        print(compP)
 
         deltas = [abs(r - compR[i + 1]) for i, r in enumerate(compR[:-1])]
         if max(deltas) > 0.8 * pitch:
@@ -341,7 +340,7 @@ class Stitcher:
         opening_angle = abs(self.startAngle - self.endAngle)
         print('OPENING ANGLE:', opening_angle)
         # print(self.startAngle)
-        print(self.endAngle)
+        # print(self.endAngle)
 
         while np.max(np.abs(compP[1:] - compP[:-1])) > np.pi:
             midx = np.argmax(np.abs(compP[1:] - compP[:-1]))
@@ -359,21 +358,14 @@ class Stitcher:
             if test_idx == 0:
                 self.endAngle -= 2 * np.pi
                 end_idx = np.argmax(compP > self.endAngle)
-                print('COMPARISON:')
-                print(self.endAngle)
-                print(self.endAngle + (2 * np.pi))
-                print(compP[end_idx])
-                print(compP[-1] % (2 * np.pi))
-                print(compR[-1] / scale)
-                print(compP)
                 break
         loss = len(compP) - end_idx
 
         if loss > 1000:
-            #print('Cutoff Loss Overflow:', loss)
+            # print('Cutoff Loss Overflow:', loss)
             # raise Exception('Cutoff Loss Overflow ' + str(loss))
             pass
-            #end_idx = len(compP) - 1
+            # end_idx = len(compP) - 1
 
         start_idx = np.argmax(compP > self.startAngle)
         if start_idx == 0:
