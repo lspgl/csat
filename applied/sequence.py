@@ -160,8 +160,11 @@ class Sequence:
                 spiral, calibration = CombinedSequence(n=n, directory='hardware/combined', env=env)
                 localElectrode = Electrode(serial, spiral, calibration)
                 electrodes.append(copy.copy(localElectrode))
+            except KeyboardInterrupt:
+                sys.exit()
             except:
                 traceback.print_exc()
+                sys.exit()
 
         t = datetime.datetime.now()
         timestamp = (str(t.year) + '-' + str(t.month) + '-' + str(t.day) + '-' +
