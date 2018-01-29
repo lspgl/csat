@@ -104,12 +104,12 @@ class Stitcher:
                 pstart = image.angles[image.start[0][0]] + (i * 2 * np.pi / len(self.fns))
                 rstart = image.radii[image.start[0][1]]
                 ampstart = image.start[1]
-                idstart = i + 1
+                idstart = len(self.images) - i
             if image.end[1] > ampend:
                 pend = image.angles[image.end[0][0]] + (i * 2 * np.pi / len(self.fns))
                 rend = image.radii[image.end[0][1]]
                 ampend = image.end[1]
-                idend = i + 1
+                idend = len(self.images) - i
 
             for j, coord in enumerate(zip(image.r, image.phi)):
                 rs, phis = coord
@@ -285,7 +285,8 @@ class Stitcher:
             ep = b.ep
             others = [s for s in band_segments if s.identity != b.identity]
             nearest_band, dr = self.getNearestSegment(b.ep, others, fraction=(1 / len(self.fns)))
-            if dr < 3.0:
+            print(dr)
+            if dr < 10.0:
                 contained = False
                 for g in band_groups:
                     if b.identity in g:
@@ -316,6 +317,7 @@ class Stitcher:
             compP = np.append(compP, phi)
         order = np.argsort(compP)
         compP = compP[order]
+        print(compP)
 
         deltas = [abs(r - compR[i + 1]) for i, r in enumerate(compR[:-1])]
         if max(deltas) > 0.8 * pitch:
@@ -339,6 +341,17 @@ class Stitcher:
         opening_angle = abs(self.startAngle - self.endAngle)
         print('OPENING ANGLE:', opening_angle)
         # print(self.startAngle)
+        print(self.endAngle)
+
+        while np.max(np.abs(compP[1:] - compP[:-1])) > np.pi:
+            midx = np.argmax(np.abs(compP[1:] - compP[:-1]))
+            compP[midx + 1:] -= 2 * np.pi
+
+        figg = plt.figure()
+        axx = figg.add_subplot(111)
+        axx.plot(compP)
+        dpDebug = compP[1:] - compP[:-1]
+        figg.savefig('Debug_compP.png', dpi=300)
 
         while True:
             self.endAngle += 2 * np.pi
@@ -346,12 +359,20 @@ class Stitcher:
             if test_idx == 0:
                 self.endAngle -= 2 * np.pi
                 end_idx = np.argmax(compP > self.endAngle)
+                print('COMPARISON:')
+                print(self.endAngle)
+                print(self.endAngle + (2 * np.pi))
+                print(compP[end_idx])
+                print(compP[-1] % (2 * np.pi))
+                print(compR[-1] / scale)
+                print(compP)
                 break
         loss = len(compP) - end_idx
 
         if loss > 1000:
             #print('Cutoff Loss Overflow:', loss)
-            raise Exception('Cutoff Loss Overflow ' + str(loss))
+            # raise Exception('Cutoff Loss Overflow ' + str(loss))
+            pass
             #end_idx = len(compP) - 1
 
         start_idx = np.argmax(compP > self.startAngle)
@@ -365,8 +386,11 @@ class Stitcher:
         dr_start = abs(compR[::chirality][start_idx] / scale - self.startRadius)
         dr_end = abs(compR[::chirality][end_idx] / scale - self.endRadius)
 
+        print('EPR:', (compR[::chirality][end_idx] / scale))
+        print('EPP:', (compP[::chirality][end_idx]) % (2 * np.pi))
+
         if max(dr_start, dr_end) > 0.5 * pitch:
-            print('!!!!!!!!!!!!!!!!!!')
+            print('Band Cutoff Mismatch exception:')
             print('Band Start Metric:')
             print('r:', self.startRadius)
             print('t:', self.startAngle % (2 * np.pi))
@@ -380,7 +404,6 @@ class Stitcher:
             print('id:', self.idend)
             print('------------------')
             print('Pitch Threshold (x0.5):', pitch)
-            print('!!!!!!!!!!!!!!!!!!')
             raise Exception('Band Cutoff Mismatch')
 
         compP = compP[start_idx:end_idx]

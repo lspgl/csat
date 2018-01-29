@@ -212,7 +212,7 @@ class Walker:
                     termination = -1
                 current.append(head[:])
             # min_length = 50
-            min_length = 200
+            min_length = 3
             if len(current) > min_length:
                 coords.append(current[:])
                 endpoints.append(head[:])
