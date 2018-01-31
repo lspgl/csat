@@ -164,7 +164,7 @@ class Sequence:
                 sys.exit()
             except:
                 traceback.print_exc()
-                sys.exit()
+                # sys.exit()
 
         t = datetime.datetime.now()
         timestamp = (str(t.year) + '-' + str(t.month) + '-' + str(t.day) + '-' +
