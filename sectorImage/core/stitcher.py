@@ -144,10 +144,35 @@ class Stitcher:
 
         return segments
 
-    def getNearestSegment(self, refPoint, segments, fraction=1):
+    def getNearestSegment(self, refPoint, segments, minTheta_FLAG=False, fraction=1):
         r0 = refPoint[1]
-        dr_min = np.array([np.min(np.abs(s.rs[:int(fraction * (len(s.rs)))] - r0)) for s in segments])
+        if fraction == 1:
+            dr_min = np.array([np.min(np.abs(s.rs[:int(len(s.rs))] - r0)) for s in segments])
+        else:
+            dr_min = []
+            max_angle = fraction * 2 * np.pi
+            for s in segments:
+                maxidx = np.argmax(s.phis > max_angle)
+                if maxidx != 0:
+                    dr_min.append(np.min(np.abs(s.rs[:maxidx] - r0)))
+                else:
+                    dr_min.append(np.inf)
+
+        if minTheta_FLAG:
+            minSegment = segments[np.argmin(dr_min)]
+            minVal = np.min(dr_min)
+            minTheta = minSegment.phis[np.argmin(minSegment.rs)]
+            return segments[np.argmin(dr_min)], np.min(dr_min), minTheta
         return segments[np.argmin(dr_min)], np.min(dr_min)
+
+    def getNearestStartpoint(self, refPoint, segments):
+        r0 = refPoint[1]
+        ris = np.array([s.lp[1] for s in segments])
+        deltas = np.abs(ris - r0)
+        minSegment = segments[np.argmin(deltas)]
+        minVal = np.min(deltas)
+        minTheta = minSegment.phis[np.argmin(minSegment.rs)]
+        return minSegment, minVal, minTheta
 
     def combineSegments(self, segments, plot=False):
         """
@@ -285,9 +310,16 @@ class Stitcher:
             ep = b.ep
             others = [s for s in band_segments if s.identity != b.identity]
             # nearest_band, dr = self.getNearestSegment(b.ep, others, fraction=(1 / len(self.fns)))
-            nearest_band, dr = self.getNearestSegment(b.ep, others)
+            nearest_band, dr = self.getNearestSegment(
+                b.ep, others, minTheta_FLAG=False, fraction=1 / len(self.fns))
+            # nearest_band, dr, minTheta = self.getNearestStartpoint(b.ep, others)
+            #dt = abs(b.ep[0] - minTheta)
+            #dt = min(dt, abs(2 * np.pi - dt))
+
             print(dr)
-            if dr < 10.0:
+            #print('dt:', dt)
+            if dr < 10.0:  # and dt < 0.5:
+
                 contained = False
                 for g in band_groups:
                     if b.identity in g:

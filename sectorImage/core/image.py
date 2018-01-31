@@ -105,11 +105,12 @@ class Image:
         transformed = transformed[thetaPlus_idx:thetaMinus_idx]
 
         # Pad the transformed image with the boundary value
+        """
         start_idx = np.argmax(transformed > 0, axis=1)
         start_idx = np.ones((len(transformed)), np.uint8) * 1000
         transformed[:, :999] = 0
         for i in range(len(transformed)):
-            transformed[i][transformed[i] == 0] = transformed[i, start_idx[i]]
+            transformed[i][transformed[i] == 0] = transformed[i, start_idx[i]]"""
 
         # Remove Calibration features
         calib_size_px = np.mean(np.array([x[2] for x in self.calibration]))
